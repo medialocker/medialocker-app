@@ -1,0 +1,48 @@
+/tmp
+/out-tsc
+
+# dependencies (any workspace level)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/.pnp
+.pnp.js
+
+# build outputs (any workspace level)
+dist/
+.next/
+.turbo/
+out/
+.dev-logs/
+**/.vitepress/dist
+**/.vitepress/cache
+coverage/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/*
+!/.vscode/settings.json
+/.claude/
+/.idea/
+/.opencode/
+/dev/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# supabase
+supabase/.branches
+supabase/.temp
+
+# docker
+infra/data/
+
+# VitePress typecheck build output
+**/.vitepress/dist-typecheck

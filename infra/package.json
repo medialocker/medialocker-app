@@ -1,0 +1,10 @@
+{
+  "name": "@medialocker/infra",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Infrastructure: docker-compose stack, Caddy edge, MinIO/Supabase config.",
+  "scripts": {
+    "config": "docker compose -f docker-compose.yml config",
+    "config:check": "docker compose -f docker-compose.yml config -q"
+  }
+}

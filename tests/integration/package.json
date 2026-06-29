@@ -1,0 +1,24 @@
+{
+  "name": "@medialocker/integration-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Integration harness exercising real Postgres (capacity + billing SQL paths). Not a pnpm-workspace member; deps resolve from the root store. Run from repo root via `pnpm test:integration`.",
+  "scripts": {
+    "stack:up": "docker compose -f docker-compose.test.yml up -d",
+    "stack:down": "docker compose -f docker-compose.test.yml down -v",
+    "setup": "tsx scripts/setup.ts",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ioredis": "^5.4.0",
+    "postgres": "^3.4.0",
+    "stripe": "^17.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

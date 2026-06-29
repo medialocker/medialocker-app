@@ -1,0 +1,17 @@
+# Never ship secrets or local cruft into build contexts / images.
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.gitignore
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/*.log
+npm-debug.log*
+**/.DS_Store
+.idea
+.vscode
+**/*.tsbuildinfo

@@ -1,0 +1,17 @@
+{
+  "name": "@medialocker/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev src --port 5173",
+    "build": "vitepress build src",
+    "preview": "vitepress preview src",
+    "lint": "prettier --check \"src/.vitepress/config.ts\"",
+    "typecheck": "vitepress build src --outDir src/.vitepress/dist-typecheck",
+    "clean": "rm -rf src/.vitepress/dist"
+  },
+  "devDependencies": {
+    "vitepress": "^1.5.0"
+  }
+}

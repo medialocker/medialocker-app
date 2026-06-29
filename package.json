@@ -1,0 +1,33 @@
+{
+  "name": "medialocker",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration:setup": "pnpm --dir tests/integration install && docker compose -f tests/integration/docker-compose.test.yml up -d",
+    "test:integration": "cd tests/integration && vitest run",
+    "test:integration:teardown": "docker compose -f tests/integration/docker-compose.test.yml down -v",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:migrate": "pnpm --filter @medialocker/db migrate",
+    "db:generate": "pnpm --filter @medialocker/db generate",
+    "db:seed": "pnpm --filter @medialocker/db seed",
+    "seed:dev": "bash scripts/with-env.sh pnpm --filter @medialocker/worker exec tsx scripts/seed-dev.ts",
+    "stripe:setup": "pnpm --filter @medialocker/billing setup:stripe",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "^3.3.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

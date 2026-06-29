@@ -1,0 +1,130 @@
+{
+    email admin@{$PUBLIC_BASE_DOMAIN}
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+    # Edge rate limiting (§8.11) via the caddy-ratelimit module (built in the
+    # Caddy image). The handler must be ordered before reverse_proxy.
+    order rate_limit before reverse_proxy
+    # §G04: trust Cloudflare as the upstream proxy so {client_ip} (used in
+    # rate_limit zones) reflects the real end-user IP rather than a
+    # Cloudflare edge address.
+    servers {
+        trusted_proxies static cloudflare
+    }
+}
+
+# ────────────────────────────────────────────
+# Object storage note: S3 traffic no longer transits Caddy. Objects are
+# served directly by Hetzner Object Storage via presigned URLs
+# (S3_PUBLIC_ENDPOINT), so the former *.s3 / s3 reverse-proxy vhosts to the
+# in-cluster gateway have been removed.
+# ────────────────────────────────────────────
+
+# ────────────────────────────────────────────
+# Root domain
+# ────────────────────────────────────────────
+# The root domain is not served by this edge — only the app/api/mcp/docs/
+# plausible subdomains are proxied here. Point the root domain's DNS wherever
+# you choose (or leave it unused).
+
+# ────────────────────────────────────────────
+# Dashboard
+# ────────────────────────────────────────────
+
+app.{$PUBLIC_BASE_DOMAIN} {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Frame-Options "DENY"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # NOTE: Content-Security-Policy for this HTML host is intentionally NOT
+        # set here. It is owned by the Next middleware (apps/app/src/middleware.ts)
+        # so it can carry a per-request 'nonce-…' on script-src and drop
+        # 'unsafe-inline'. Setting a second CSP at the edge would intersect with
+        # the middleware's and break nonce'd hydration. Other browser headers
+        # (HSTS, X-Content-Type-Options, …) stay here.
+    }
+
+    reverse_proxy app:3000
+}
+
+# ────────────────────────────────────────────
+# API
+# ────────────────────────────────────────────
+
+api.{$PUBLIC_BASE_DOMAIN} {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    # CORS is handled by the API itself (@fastify/cors), which reflects only the
+    # known dashboard/mcp origins with credentials. Do NOT inject a
+    # wildcard ACAO here — it would both leak cross-origin access and emit a
+    # duplicate ACAO header. Preflight (OPTIONS) is answered by @fastify/cors.
+
+    # Edge rate limit per client IP (§8.11) — a coarse DDoS/abuse guard in front
+    # of the API's own per-tenant limiter.
+    rate_limit {
+        zone api_edge {
+            key {client_ip}
+            events 600
+            window 1m
+        }
+    }
+
+    # §G07: reject request bodies larger than 10 MB at the edge. The API is a
+    # JSON control-plane; legitimate payloads (metadata, batch keys) are well
+    # under this. Object bytes go through the S3 data path.
+    request_body {
+        max_size 10MB
+    }
+
+    reverse_proxy api:3002
+}
+
+# ────────────────────────────────────────────
+# MCP Server (§G06: route removed from public exposure)
+#
+# The MCP admin surface is not exposed to the internet. Uncomment and add
+# IP restrictions or SSO if remote admin access is required:
+#
+# mcp.{$PUBLIC_BASE_DOMAIN} {
+#     tls {
+#         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+#     }
+#
+#     @trusted remote_ip 10.42.0.0/16
+#     handle @trusted {
+#         reverse_proxy mcp:3003
+#     }
+#     respond 403
+# }
+# ────────────────────────────────────────────
+# Documentation
+# ────────────────────────────────────────────
+
+docs.{$PUBLIC_BASE_DOMAIN} {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    reverse_proxy docs:5173
+}
+
+# Supabase (Postgres + Auth + Studio) is now Supabase Cloud — managed at
+# https://<project-ref>.supabase.co and the Supabase dashboard. No local route.
+
+# ────────────────────────────────────────────
+# Analytics
+# ────────────────────────────────────────────
+
+plausible.{$PUBLIC_BASE_DOMAIN} {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    reverse_proxy plausible:8000
+}

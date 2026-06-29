@@ -1,0 +1,548 @@
+name: medialocker
+
+# Network segmentation (§8.7). Two bridges:
+#  - edge:     caddy-facing services (reverse proxy + the HTTP services it routes
+#              to). Frontends live ONLY here and therefore cannot reach the data
+#              stores directly.
+#  - internal: data plane (redis/clickhouse) + the backend services that talk to
+#              them.
+# Services that are both proxied AND talk to data (api, mcp, plausible) join both.
+# Postgres + Auth are now Supabase Cloud and object storage is Hetzner — both are
+# external, reached over the public network (api/worker/mcp egress).
+# NOTE: validated with `docker compose config`; run a `docker compose up` smoke
+# test to confirm inter-service connectivity before relying on it in production.
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.42.0.0/16
+
+volumes:
+  redis_data:
+    name: medialocker_redis_data
+  caddy_data:
+    name: medialocker_caddy_data
+  caddy_config:
+    name: medialocker_caddy_config
+  plausible_clickhouse:
+    name: medialocker_plausible_clickhouse
+
+services:
+  # ──────────────────────────────────────
+  # Infrastructure
+  # ──────────────────────────────────────
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      # §G02: BullMQ uses volatile TTLs for job data; volatile-lru evicts only
+      # keys with an expiry set first, preserving queue metadata (repeatables,
+      # markers) that are persisted without TTL. Size Redis so that the working
+      # set fits under maxmemory — if eviction rate climbs, bump the memory cap
+      # and/or add a second Redis instance for cache separation.
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ──────────────────────────────────────
+  # Application Services
+  # ──────────────────────────────────────
+  #
+  # Postgres + Auth run on Supabase Cloud (managed). The api/worker/mcp reach it
+  # over the public network via DATABASE_URL (transaction pooler, 6543) and
+  # SUPABASE_URL. Managed backups/PITR replace the old pg-backup service.
+
+  # NOTE: the root domain (medialocker.io) is not built or served by this stack;
+  # only the app/api/mcp/docs/plausible subdomains are. Route the root domain's
+  # DNS wherever you choose.
+
+  app:
+    build:
+      context: ..
+      dockerfile: apps/app/Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required (Supabase Cloud project URL)}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required (sb_publishable_…)}
+      NEXT_PUBLIC_API_URL: https://api.${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}
+    networks:
+      - edge
+    expose:
+      - "3000"
+    # P3.5: hardening — drop all Linux capabilities (the Node runtime needs
+    # none), forbid privilege escalation, and run the root filesystem read-only
+    # with a tmpfs for the only writable path Next needs (/tmp).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required (Supabase Cloud transaction pooler, port 6543, sslmode=require)}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      # Verifies dashboard JWTs against the project JWKS (asymmetric ES256) — only
+      # the project URL is needed; there is no shared secret or service_role key.
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required (Supabase Cloud project URL)}
+      HETZNER_S3_ENDPOINT: ${HETZNER_S3_ENDPOINT:?HETZNER_S3_ENDPOINT is required}
+      HETZNER_S3_REGION: ${HETZNER_S3_REGION:-fsn1}
+      HETZNER_S3_ACCESS_KEY: ${HETZNER_S3_ACCESS_KEY:?HETZNER_S3_ACCESS_KEY is required}
+      HETZNER_S3_SECRET_KEY: ${HETZNER_S3_SECRET_KEY:?HETZNER_S3_SECRET_KEY is required}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY is required}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?STRIPE_WEBHOOK_SECRET is required}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET is required}
+      API_KEY_ENC_KEY: ${API_KEY_ENC_KEY:?API_KEY_ENC_KEY is required}
+      PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://s3.${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+    networks:
+      - edge
+      - internal
+    expose:
+      - "3002"
+    # P3.5: hardening (see app).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3002/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+        reservations:
+          cpus: "0.5"
+          memory: "256M"
+
+  mcp:
+    build:
+      context: ..
+      dockerfile: apps/mcp/Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required (Supabase Cloud transaction pooler, port 6543, sslmode=require)}
+      # Dashboard JWTs are verified against the project JWKS (asymmetric ES256) —
+      # only the project URL is needed; no shared secret or service_role key.
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required (Supabase Cloud project URL)}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET is required}
+      PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://s3.medialocker.io}
+      # Without these the MCP server can't reach Redis (rate-limit + generate_variants
+      # BullMQ jobs), can't reach object storage (create_bucket / presign / purge),
+      # can't mint api keys (API_KEY_ENC_KEY), and crashes production config
+      # validation. (3.1)
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      HETZNER_S3_ENDPOINT: ${HETZNER_S3_ENDPOINT:?HETZNER_S3_ENDPOINT is required}
+      HETZNER_S3_REGION: ${HETZNER_S3_REGION:-fsn1}
+      HETZNER_S3_ACCESS_KEY: ${HETZNER_S3_ACCESS_KEY:?HETZNER_S3_ACCESS_KEY is required}
+      HETZNER_S3_SECRET_KEY: ${HETZNER_S3_SECRET_KEY:?HETZNER_S3_SECRET_KEY is required}
+      API_KEY_ENC_KEY: ${API_KEY_ENC_KEY:?API_KEY_ENC_KEY is required}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY is required}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    networks:
+      - edge
+      - internal
+    expose:
+      - "3003"
+    # P3.5: hardening (see app).
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3003/mcp/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required (Supabase Cloud transaction pooler, port 6543, sslmode=require)}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379
+      HETZNER_S3_ENDPOINT: ${HETZNER_S3_ENDPOINT:?HETZNER_S3_ENDPOINT is required}
+      HETZNER_S3_REGION: ${HETZNER_S3_REGION:-fsn1}
+      HETZNER_S3_ACCESS_KEY: ${HETZNER_S3_ACCESS_KEY:?HETZNER_S3_ACCESS_KEY is required}
+      HETZNER_S3_SECRET_KEY: ${HETZNER_S3_SECRET_KEY:?HETZNER_S3_SECRET_KEY is required}
+      SUPABASE_URL: ${SUPABASE_URL:?SUPABASE_URL is required (Supabase Cloud project URL)}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?STRIPE_SECRET_KEY is required}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:?INTERNAL_API_SECRET is required}
+      PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-https://s3.medialocker.io}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # P3.11: internal-only metrics + BullMQ dashboard (queue depth / worker lag).
+      # Exposed at :9090 on the `internal` network ONLY — deliberately NOT given a
+      # public Caddy route (admin surface, per P1.50). Reachable from a bastion/VPN
+      # on the internal network, or scraped by an internal Prometheus. Set
+      # WORKER_METRICS_TOKEN to require a bearer token on /metrics and /admin/queues.
+      WORKER_METRICS_PORT: "9090"
+      WORKER_METRICS_TOKEN: ${WORKER_METRICS_TOKEN:-}
+    networks:
+      - internal
+    # P3.5: hardening. The worker shells out to sharp/ffmpeg for derivative
+    # generation, which uses /tmp for scratch space; a generous tmpfs covers it.
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # /health is unauthenticated by design (liveness only, exposes no queue data).
+      test:
+        - CMD
+        - node
+        - "-e"
+        - "require('node:http').get('http://127.0.0.1:9090/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ──────────────────────────────────────
+  # Documentation
+  # ──────────────────────────────────────
+
+  docs:
+    build:
+      context: ..
+      dockerfile: apps/docs/Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - edge
+    expose:
+      - "5173"
+    # P3.5: hardening — `serve` only reads the static dist; tmpfs covers /tmp.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+
+  # ──────────────────────────────────────
+  # Analytics
+  # ──────────────────────────────────────
+
+  plausible-db:
+    image: clickhouse/clickhouse-server:23.8-alpine
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required}
+    volumes:
+      - plausible_clickhouse:/var/lib/clickhouse
+    networks:
+      - internal
+    expose:
+      - "8123"
+    healthcheck:
+      # ClickHouse HTTP ping endpoint returns "Ok." once the server is ready to
+      # accept queries. wget is present in the alpine image.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8123/ping | grep -q Ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: "512M"
+
+  plausible:
+    image: plausible/analytics:v2.1
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # No `sleep 10` race: plausible-db is gated on a real healthcheck via
+    # depends_on below, so ClickHouse is guaranteed query-ready before migrate.
+    command: sh -c "/entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run"
+    environment:
+      BASE_URL: https://plausible.${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}
+      SECRET_KEY_BASE: ${PLAUSIBLE_SECRET_KEY:?PLAUSIBLE_SECRET_KEY is required}
+      DATABASE_URL: http://default:${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD is required}@plausible-db:8123
+      DISABLE_REGISTRATION: "true"
+    networks:
+      - edge
+      - internal
+    expose:
+      - "8000"
+    healthcheck:
+      # Plausible exposes /api/health once the app has booted and migrations ran.
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      plausible-db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256M"
+
+  # ──────────────────────────────────────
+  # Reverse Proxy
+  # ──────────────────────────────────────
+
+  caddy:
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN is required}
+      PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:?PUBLIC_BASE_DOMAIN is required}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    # P3.5: hardening. Caddy needs NET_BIND_SERVICE to bind :80/:443; drop every
+    # other capability and forbid privilege escalation. Not read_only — Caddy
+    # persists the ACME cert store / autosave config to /data and /config.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - edge
+    # P2.65: Caddy must NOT be gated on every upstream being healthy. A single
+    # unhealthy upstream (e.g. plausible mid-migration) would otherwise block
+    # Caddy from starting and take down ALL routes. Caddy resolves upstreams
+    # lazily per-request and returns 502 only for the affected route, so we
+    # start it as soon as the containers exist (service_started) and let each
+    # site come up independently as its backend becomes ready.
+    depends_on:
+      app:
+        condition: service_started
+      api:
+        condition: service_started
+      mcp:
+        condition: service_started
+      docs:
+        condition: service_started
+      plausible:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          # Caddy is the sole edge for 8 sites and also runs the caddy-ratelimit
+          # module, which holds in-memory per-client-IP token buckets across the
+          # s3/api/mcp zones (s3 alone allows 1200 events/IP/min). Under many
+          # distinct client IPs that bucket state, plus TLS session handling and
+          # the DNS-01 cert store, can exceed 128 MiB. 256 MiB gives headroom
+          # without being wasteful for a reverse proxy.
+          cpus: "0.5"
+          memory: "256M"
+
+  # ──────────────────────────────────────
+  # Backup Services (§8.5)
+  # ──────────────────────────────────────
+
+  redis-backup:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data:ro
+      - ./backups/redis:/backups
+    networks:
+      - internal
+    depends_on:
+      redis:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          ts=$$(date +%Y%m%d-%H%M%S)
+          echo "redis backup start $$ts"
+          # Capture the previous successful save timestamp, trigger a background
+          # save, then poll LASTSAVE until it advances. This avoids racing a
+          # fixed sleep against an arbitrarily large RDB write — we copy only
+          # once BGSAVE has actually completed (rdb_last_save advanced).
+          prev=$$(redis-cli -h redis --no-auth-warning LASTSAVE)
+          if [ -z "$$prev" ]; then
+            echo "redis unreachable; skipping this cycle"
+          else
+            redis-cli -h redis --no-auth-warning BGSAVE
+            saved=0
+            # Up to ~300s (150 * 2s) for the background save to land.
+            for i in $$(seq 1 150); do
+              cur=$$(redis-cli -h redis --no-auth-warning LASTSAVE)
+              if [ -n "$$cur" ] && [ "$$cur" != "$$prev" ]; then
+                saved=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$$saved" = "1" ]; then
+              cp /data/dump.rdb /backups/dump-$$ts.rdb 2>/dev/null || echo "no RDB file found"
+            else
+              echo "BGSAVE did not complete in time; skipping copy"
+            fi
+          fi
+          ls -1t /backups/dump-*.rdb 2>/dev/null | tail -n +15 | xargs -r rm -f
+          sleep 86400
+        done
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"

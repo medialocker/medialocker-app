@@ -1,0 +1,54 @@
+# Throwaway stack for the integration harness.
+#
+# Everything here is disposable: non-default host ports (so it never collides
+# with a developer's running dev stack on 5432/6379) and tmpfs/anonymous
+# volumes so no state survives `docker compose down`. The setup script
+# (scripts/setup.ts) waits for health, applies packages/db/migrations/*.sql in
+# order, then seeds a minimal org/capacity/bucket.
+#
+# Bring up:   docker compose -f tests/integration/docker-compose.test.yml up -d
+# Tear down:  docker compose -f tests/integration/docker-compose.test.yml down -v
+#
+# The host ports below are mirrored by the defaults in scripts/test-env.ts; if
+# you change one, change both (or override via TEST_* env vars).
+
+name: medialocker-itest
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: medialocker_test
+    ports:
+      # host 55432 -> container 5432 (non-default host port), bound to loopback
+      # only so the throwaway DB is never reachable off-box (P2.71).
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      # ephemeral data dir — nothing persists across runs
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d medialocker_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # No object-storage container: tenant uploads now go browser→Hetzner via
+  # presigned URLs (no in-process data plane), and the remaining suites only
+  # exercise the capacity/billing SQL paths against Postgres. The HETZNER_S3_*
+  # config keys are satisfied by dummy placeholders in scripts/test-env.ts;
+  # nothing in the harness opens an S3 connection.
+
+  redis-test:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      # host 56379 -> container 6379, bound to loopback only (P2.71).
+      - "127.0.0.1:56379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30

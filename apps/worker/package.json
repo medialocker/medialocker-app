@@ -1,0 +1,42 @@
+{
+  "name": "@medialocker/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "seed:dev": "tsx scripts/seed-dev.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1072.0",
+    "@aws-sdk/lib-storage": "^3.1072.0",
+    "@medialocker/auth": "workspace:^",
+    "@medialocker/billing": "workspace:^",
+    "@medialocker/config": "workspace:*",
+    "@medialocker/core": "workspace:*",
+    "@medialocker/db": "workspace:*",
+    "@medialocker/media": "workspace:*",
+    "@medialocker/observability": "workspace:*",
+    "@reaatech/idempotency-middleware": "^1.0.0",
+    "@reaatech/idempotency-middleware-adapter-redis": "^1.0.0",
+    "@reaatech/secret-rotation-core": "^0.1.0",
+    "@reaatech/secret-rotation-types": "^0.1.0",
+    "bullmq": "^5.0.0",
+    "fluent-ffmpeg": "^2.1.0",
+    "ioredis": "^5.4.0",
+    "postgres": "^3.4.0",
+    "sharp": "^0.33.0",
+    "stripe": "^16.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.0",
+    "tsx": "^4.19.0"
+  }
+}

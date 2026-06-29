@@ -1,0 +1,337 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: typecheck / test / build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Blocking quality gates.
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  mcp-contract:
+    name: MCP contract conformance
+    runs-on: ubuntu-latest
+    # Conformance runs after the build gate so we test buildable code.
+    needs: build
+    # P2.68: stand up the MCP server's real runtime deps as service containers
+    # so the server boots for real and the contract step is a MEANINGFUL gate
+    # (no longer continue-on-error). Both bind to the localhost defaults baked
+    # into @medialocker/config so the server connects without extra wiring.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: medialocker_service
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: medialocker
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U medialocker_service -d medialocker"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Point the server at the service containers (these match the
+      # @medialocker/config defaults, but set them explicitly for clarity).
+      DATABASE_URL: postgresql://medialocker_service:password@localhost:5432/medialocker
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+      PORT: "3003"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build MCP server
+        run: pnpm --filter @medialocker/mcp build
+
+      - name: Apply database migrations
+        run: |
+          for f in $(ls packages/db/migrations/*.sql | sort); do
+            echo "Applying $f"
+            PGPASSWORD=password psql \
+              -h localhost -p 5432 -U medialocker_service -d medialocker \
+              -v ON_ERROR_STOP=1 -f "$f"
+          done
+
+      # Now a BLOCKING gate: the deps are real (service containers above), so a
+      # failure here means the MCP contract is actually broken, not flaky setup.
+      - name: MCP contract conformance
+        run: |
+          # Spawn the MCP server in the background.
+          node apps/mcp/dist/index.js &
+          MCP_PID=$!
+
+          # Wait for the server to become reachable (up to ~60s).
+          up=0
+          for i in $(seq 1 60); do
+            if curl -fsS "http://localhost:3003/mcp/health" >/dev/null 2>&1; then
+              echo "MCP server is up"
+              up=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$up" != "1" ]; then
+            echo "MCP server failed to become healthy"
+            kill "$MCP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Run the contract/conformance suite via @reaatech/mcp-contract-cli
+          # (which uses @reaatech/mcp-contract-validators) against the running
+          # server, emitting a JSON report artifact.
+          STATUS=0
+          pnpm --filter @medialocker/mcp exec mcp-contract-kit test \
+            "http://localhost:3003/mcp" \
+            --format json \
+            --output mcp-contract-report.json \
+            --fail-on error || STATUS=$?
+
+          kill "$MCP_PID" 2>/dev/null || true
+          exit $STATUS
+
+      - name: Upload contract report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-contract-report
+          path: mcp-contract-report.json
+          if-no-files-found: ignore
+
+  docker:
+    name: docker compose / integration
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Compose config validation
+        env:
+          # Postgres + Auth are Supabase Cloud now — dummy Cloud-shaped values just
+          # to satisfy compose interpolation; nothing connects during `config`.
+          DATABASE_URL: postgresql://postgres.ci:ci_dummy@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+          REDIS_PASSWORD: ci_dummy_password
+          SUPABASE_URL: https://ci-dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-dummy.supabase.co
+          HETZNER_S3_ENDPOINT: http://localhost:9000
+          HETZNER_S3_REGION: us-east-1
+          HETZNER_S3_ACCESS_KEY: ci_dummy_key
+          HETZNER_S3_SECRET_KEY: ci_dummy_secret
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_dummy
+          STRIPE_SECRET_KEY: ci_dummy_stripe_key
+          STRIPE_WEBHOOK_SECRET: ci_dummy_stripe_webhook
+          INTERNAL_API_SECRET: ci_dummy_internal_secret
+          API_KEY_ENC_KEY: ci_dummy_api_enc_key
+          CLOUDFLARE_API_TOKEN: ci_dummy_cf_token
+          CLICKHOUSE_PASSWORD: ci_dummy_clickhouse_password
+          PLAUSIBLE_SECRET_KEY: ci_dummy_plausible_secret_key
+          PUBLIC_BASE_DOMAIN: example.com
+        run: docker compose -f infra/docker-compose.yml config
+
+      - name: Docker Compose build
+        env:
+          DATABASE_URL: postgresql://postgres.ci:ci_dummy@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require
+          REDIS_PASSWORD: ci_dummy_password
+          SUPABASE_URL: https://ci-dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-dummy.supabase.co
+          HETZNER_S3_ENDPOINT: http://localhost:9000
+          HETZNER_S3_REGION: us-east-1
+          HETZNER_S3_ACCESS_KEY: ci_dummy_key
+          HETZNER_S3_SECRET_KEY: ci_dummy_secret
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_dummy
+          STRIPE_SECRET_KEY: ci_dummy_stripe_key
+          STRIPE_WEBHOOK_SECRET: ci_dummy_stripe_webhook
+          INTERNAL_API_SECRET: ci_dummy_internal_secret
+          API_KEY_ENC_KEY: ci_dummy_api_enc_key
+          CLOUDFLARE_API_TOKEN: ci_dummy_cf_token
+          CLICKHOUSE_PASSWORD: ci_dummy_clickhouse_password
+          PLAUSIBLE_SECRET_KEY: ci_dummy_plausible_secret_key
+          PUBLIC_BASE_DOMAIN: example.com
+        run: docker compose -f infra/docker-compose.yml build
+
+      # P2.70: filesystem scanning (trivy job) catches vulnerable deps in the
+      # repo, but NOT what actually ships in the runtime images (base image CVEs,
+      # OS packages, the pruned production node_modules). Scan the BUILT images
+      # for the services we own. The compose project name is `medialocker`, so
+      # buildable services are tagged `medialocker-<service>`.
+      - name: Trivy image scan (built images)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: medialocker-api
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image-api.sarif
+          exit-code: "0"
+
+      - name: Trivy image scan (app)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: medialocker-app
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image-app.sarif
+          exit-code: "0"
+
+      - name: Trivy image scan (mcp)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: medialocker-mcp
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image-mcp.sarif
+          exit-code: "0"
+
+      - name: Trivy image scan (worker)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: medialocker-worker
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image-worker.sarif
+          exit-code: "0"
+
+      - name: Upload image scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .
+          category: trivy-images
+
+  integration:
+    name: integration tests
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      DATABASE_URL: postgresql://medialocker_service:password@localhost:55432/medialocker
+      REDIS_URL: redis://localhost:56379
+      HETZNER_S3_ENDPOINT: http://localhost:59000
+      HETZNER_S3_REGION: us-east-1
+      HETZNER_S3_ACCESS_KEY: minioadmin
+      HETZNER_S3_SECRET_KEY: minioadmin
+      INTERNAL_API_SECRET: integration_test_secret
+      API_KEY_ENC_KEY: ABEiM0RVZneImQNIJqILPURajCGIVkcaQuBlG5+O2qA=
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Start integration services
+        run: pnpm test:integration:setup
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Tear down integration services
+        if: always()
+        run: pnpm test:integration:teardown
+
+  trivy:
+    name: trivy vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif

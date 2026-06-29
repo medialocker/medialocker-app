@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "@medialocker/config": ["../../packages/config/src/index.ts"],
+      "@medialocker/core": ["../../packages/core/src/index.ts"],
+      "@medialocker/db": ["../../packages/db/src/index.ts"],
+      "@medialocker/billing": ["../../packages/billing/src/index.ts"]
+    }
+  },
+  "include": ["scripts/**/*.ts", "suites/**/*.ts"]
+}

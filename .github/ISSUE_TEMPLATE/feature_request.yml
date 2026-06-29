@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an idea or improvement for MediaLocker
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? What's the use case?
+      placeholder: "I'm always frustrated when ..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions or workarounds you've considered.
+    validations:
+      required: false
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of MediaLocker would this affect?
+      options:
+        - api
+        - app (dashboard)
+        - mcp
+        - worker
+        - docs
+        - packages
+        - infra / docker-compose
+        - not sure
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that helps explain the request.
+    validations:
+      required: false
