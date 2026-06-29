@@ -1,19 +1,9 @@
 # llms.txt
 
-MediaLocker publishes [`llms.txt`](https://llmstxt.org/) discovery documents —
-plain-text, Markdown-formatted summaries that let AI assistants and coding agents
-learn how to connect and what's available without crawling the full docs. There are
-two, and they're complementary:
-
-- **Docs site (product-wide):** [`/llms.txt`](https://docs.medialocker.io/llms.txt) is
-  an index across all three surfaces — REST API, MCP server, and CLI — with
-  [`/llms-full.txt`](https://docs.medialocker.io/llms-full.txt) inlining the full
-  instructions. Start here for "how do I use MediaLocker programmatically?"
-- **MCP server (live, version-pinned):** the running MCP server serves its own
-  `llms.txt` describing exactly the deployed tool catalog. Use this when you need the
-  authoritative, up-to-the-deploy MCP surface.
-
-The rest of this page covers the **MCP server** document.
+The MediaLocker **MCP server** publishes an [`llms.txt`](https://llmstxt.org/)
+discovery document — a plain-text, Markdown-formatted summary that lets AI
+assistants and coding agents learn how to connect and what tools are available
+without reading the full docs.
 
 ## Where it's served
 
@@ -30,12 +20,9 @@ curl https://mcp.medialocker.io/llms.txt
 ```
 
 ::: info Scope
-This `llms.txt` (served by the MCP server) documents the **MCP surface only** —
-connection, auth, tools, rate limits, error codes. For a product-wide index across the
-REST API, MCP, and CLI, use the docs-site
-[`/llms.txt`](https://docs.medialocker.io/llms.txt) and
-[`/llms-full.txt`](https://docs.medialocker.io/llms-full.txt). For machine-readable REST
-details specifically, use the OpenAPI spec at
+`llms.txt` is published by the **MCP server only** — it documents the MCP surface
+(connection, auth, tools, rate limits, error codes). The REST API does not serve an
+`llms.txt`; for machine-readable REST details use the OpenAPI spec at
 `https://api.medialocker.io/api/openapi.json`.
 :::
 
