@@ -103,7 +103,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build MCP server
-        run: pnpm --filter @medialocker/mcp build
+        # turbo (via ^build) builds the workspace deps first so tsc can resolve
+        # @medialocker/{auth,db,config,observability,core,billing} type decls.
+        run: pnpm exec turbo run build --filter=@medialocker/mcp
 
       - name: Apply database migrations
         run: |
@@ -163,6 +165,10 @@ jobs:
     name: docker compose / integration
     runs-on: ubuntu-latest
     needs: build
+    # SARIF upload to code scanning needs security-events: write.
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -220,6 +226,7 @@ jobs:
       # for the services we own. The compose project name is `medialocker`, so
       # buildable services are tagged `medialocker-<service>`.
       - name: Trivy image scan (built images)
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
@@ -231,6 +238,7 @@ jobs:
           exit-code: "0"
 
       - name: Trivy image scan (app)
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
@@ -242,6 +250,7 @@ jobs:
           exit-code: "0"
 
       - name: Trivy image scan (mcp)
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
@@ -253,6 +262,7 @@ jobs:
           exit-code: "0"
 
       - name: Trivy image scan (worker)
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: image
@@ -265,6 +275,7 @@ jobs:
 
       - name: Upload image scan results
         if: always()
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: .
@@ -317,11 +328,18 @@ jobs:
   trivy:
     name: trivy vulnerability scan
     runs-on: ubuntu-latest
+    # SARIF upload to code scanning needs security-events: write.
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner
+        # Advisory scan: don't gate CI on the scanner's own install/network
+        # flakiness; findings are surfaced via the SARIF upload below.
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.33.1
         with:
           scan-type: fs
@@ -331,7 +349,8 @@ jobs:
           output: trivy-results.sarif
 
       - name: Upload scan results
-        if: always()
+        if: ${{ hashFiles('trivy-results.sarif') != '' }}
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
