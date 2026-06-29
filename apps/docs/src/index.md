@@ -23,7 +23,7 @@ features:
     link: /user/
   - icon: 🔌
     title: Developer Docs
-    details: The REST API, authentication and scopes, rate limits, errors, idempotency, presigned uploads, and the MCP server for AI agents.
+    details: The REST API, authentication and scopes, rate limits, errors, idempotency, presigned uploads, the medialocker CLI, and the MCP server for AI agents.
     link: /developer/
   - icon: 🛠
     title: Self-Hosting

@@ -34,6 +34,7 @@ export default defineConfig({
     nav: [
       { text: "User Guide", link: "/user/" },
       { text: "Developer Docs", link: "/developer/" },
+      { text: "CLI", link: "/developer/cli/" },
       { text: "Operations Guide", link: "/self-hosting/" },
       { text: "medialocker.io", link: "https://medialocker.io" },
     ],
@@ -84,6 +85,20 @@ export default defineConfig({
             { text: "API Reference", link: "/developer/api-reference" },
             { text: "Integrations", link: "/developer/integrations" },
             { text: "llms.txt", link: "/developer/llms-txt" },
+          ],
+        },
+        {
+          text: "Command Line (CLI)",
+          items: [
+            { text: "Overview", link: "/developer/cli/" },
+            { text: "Installation", link: "/developer/cli/installation" },
+            {
+              text: "Configuration & Auth",
+              link: "/developer/cli/configuration",
+            },
+            { text: "Command Reference", link: "/developer/cli/commands" },
+            { text: "Uploading & Downloading", link: "/developer/cli/uploads" },
+            { text: "MCP Server", link: "/developer/cli/mcp" },
           ],
         },
         {

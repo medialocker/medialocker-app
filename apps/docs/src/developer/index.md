@@ -6,6 +6,7 @@ control plane. Build against the REST API, an MCP client, or both.
 - **REST API** — full CRUD over media, buckets, tags, categories, sets, storyboards, API keys, usage, and billing.
 - **Presigned URLs** — clients upload and download object bytes directly to storage over short-lived signed URLs.
 - **MCP server** — a Model Context Protocol server for AI agents, exposing the same capabilities as scoped tools.
+- **CLI** — the `medialocker` command-line client for terminals and scripts, driving the same REST API.
 - **llms.txt** — machine-readable discovery for LLMs and coding assistants.
 
 ## What's here
@@ -18,6 +19,7 @@ control plane. Build against the REST API, an MCP client, or both.
 | [Idempotency](/developer/idempotency) | `Idempotency-Key` semantics for safe retries |
 | [Presigned Uploads](/developer/presign) | Single-shot and multipart uploads, downloads, tagging |
 | [API Reference](/developer/api-reference) | Endpoint-by-endpoint REST reference |
+| [Command Line (CLI)](/developer/cli/) | Install, auth, commands, uploads, and a local MCP server |
 | [MCP Server](/developer/mcp/) | Connecting, tools, resources, and limits for AI agents |
 
 ## Base URLs
