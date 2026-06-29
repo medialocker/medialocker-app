@@ -107,6 +107,24 @@ jobs:
         # @medialocker/{auth,db,config,observability,core,billing} type decls.
         run: pnpm exec turbo run build --filter=@medialocker/mcp
 
+      # The migrations GRANT to the Supabase roles `authenticated`/`anon`, which
+      # exist on Supabase but not on a vanilla postgres:16-alpine. Create them
+      # idempotently first (matches tests/integration/scripts/setup.ts).
+      - name: Provision Supabase roles
+        run: |
+          PGPASSWORD=password psql \
+            -h localhost -p 5432 -U medialocker_service -d medialocker \
+            -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticated') THEN
+              CREATE ROLE authenticated NOLOGIN;
+            END IF;
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
+              CREATE ROLE anon NOLOGIN;
+            END IF;
+          END $$;
+          SQL
+
       - name: Apply database migrations
         run: |
           for f in $(ls packages/db/migrations/*.sql | sort); do

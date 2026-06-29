@@ -3,6 +3,9 @@ RUN npm install -g pnpm@9.15.0
 WORKDIR /app
 
 FROM base AS build
+# git is required by VitePress to resolve each page's `lastUpdated` timestamp;
+# without it the build dies with "spawn git ENOENT".
+RUN apk add --no-cache git
 COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @medialocker/docs... build
