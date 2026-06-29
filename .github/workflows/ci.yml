@@ -82,7 +82,12 @@ jobs:
       # @medialocker/config defaults, but set them explicitly for clarity).
       DATABASE_URL: postgresql://medialocker_service:password@localhost:5432/medialocker
       REDIS_URL: redis://localhost:6379
-      NODE_ENV: test
+      # The MCP entrypoint only auto-starts when NODE_ENV !== "test"
+      # (apps/mcp/src/index.ts), so run it as `development` to boot a real server.
+      # That trips the non-test guard requiring a real API_KEY_ENC_KEY, so supply
+      # the same throwaway 32-byte base64 key the integration job uses.
+      NODE_ENV: development
+      API_KEY_ENC_KEY: ABEiM0RVZneImQNIJqILPURajCGIVkcaQuBlG5+O2qA=
       PORT: "3003"
     steps:
       - name: Checkout
