@@ -4,7 +4,7 @@ import { writeFile, unlink, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { MediaKind } from './types';
+import { MediaKind } from './types.js';
 
 export interface MediaProbeResult {
   kind: MediaKind;

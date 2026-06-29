@@ -1,4 +1,4 @@
-import type { MediaAsset } from './types';
+import type { MediaAsset } from './types.js';
 
 export interface VariantTarget {
   aspectRatio: string;

@@ -1,7 +1,7 @@
 export {
   MediaKind,
   DerivativeType,
-} from './types';
+} from './types.js';
 
 export type {
   MediaAsset,
@@ -12,31 +12,31 @@ export type {
   Derivative,
   Tag,
   Category,
-} from './types';
+} from './types.js';
 
 export {
   probeFile,
   classifyMedia,
   getContentType,
-} from './probe';
+} from './probe.js';
 
-export type { MediaProbeResult } from './probe';
+export type { MediaProbeResult } from './probe.js';
 
 export {
   generateVariantTargets,
   validateSetTargets,
   STANDARD_ASPECT_RATIOS,
-} from './variants';
+} from './variants.js';
 
 export type {
   VariantTarget,
   SetTarget,
   AspectRatioDefinition,
-} from './variants';
+} from './variants.js';
 
 export {
   buildSearchQuery,
   sanitizeSearchQuery,
-} from './search';
+} from './search.js';
 
-export type { SearchFilters } from './search';
+export type { SearchFilters } from './search.js';
