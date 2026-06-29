@@ -1,0 +1,87 @@
+name: Release (Docker images → GHCR)
+
+# Builds and publishes the runtime container images for every service we own to
+# the GitHub Container Registry. CI quality gates (lint/typecheck/test/build,
+# MCP contract, integration, compose build, Trivy fs scan) live in ci.yml and
+# run independently; this workflow is the publish half.
+#
+# Triggers:
+#   - push to main         → :main and :edge (rolling)
+#   - push of a v* tag      → :<tag> and :latest (release)
+#   - workflow_dispatch     → manual one-off (publishes :edge)
+#
+# Images: ghcr.io/medialocker/medialocker-app/medialocker-<service>
+# Each Dockerfile builds from the repo root (the pnpm workspace); the app image
+# reads NEXT_PUBLIC_* at runtime, so no build-args are baked in here.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  # Don't cancel an in-flight publish — let pushes complete to avoid partial tags.
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api, app, docs, mcp, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/medialocker-${{ matrix.service }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=edge
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,scope=${{ matrix.service }},mode=max
+
+      - name: Scan published image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ghcr.io/${{ github.repository }}/medialocker-${{ matrix.service }}:${{ github.ref_type == 'tag' && 'latest' || 'edge' }}
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
