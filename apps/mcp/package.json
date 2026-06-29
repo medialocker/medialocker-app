@@ -31,7 +31,7 @@
     "@reaatech/mcp-gateway-cache": "^1.1.0",
     "@reaatech/mcp-gateway-core": "^1.1.0",
     "@reaatech/mcp-gateway-observability": "^1.0.0",
-    "@reaatech/mcp-gateway-rate-limit": "^1.1.0",
+    "@reaatech/mcp-gateway-rate-limit": "^1.1.2",
     "@reaatech/mcp-server-core": "^1.0.1",
     "@reaatech/mcp-server-observability": "^1.1.0",
     "@reaatech/mcp-server-tools": "^1.0.1",
@@ -49,8 +49,8 @@
     "@aws-sdk/s3-request-presigner": "^3.700.0"
   },
   "devDependencies": {
-    "@reaatech/mcp-contract-cli": "^0.1.1",
-    "@reaatech/mcp-contract-validators": "^0.1.1",
+    "@reaatech/mcp-contract-cli": "^0.2.1",
+    "@reaatech/mcp-contract-validators": "^0.1.2",
     "vitest": "^2.1.0"
   }
 }

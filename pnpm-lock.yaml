@@ -67,7 +67,7 @@ importers:
         version: 1.0.0
       bullmq:
         specifier: ^5.0.0
-        version: 5.78.0(redis@6.0.0(@opentelemetry/api@1.9.1))
+        version: 5.78.0(redis@6.0.1(@opentelemetry/api@1.9.1))
       fastify:
         specifier: ^5.0.0
         version: 5.8.5
@@ -209,8 +209,8 @@ importers:
         specifier: ^1.0.0
         version: 1.0.0
       '@reaatech/mcp-gateway-rate-limit':
-        specifier: ^1.1.0
-        version: 1.1.0(@opentelemetry/api@1.9.1)(fastify@5.8.5)(zod@3.25.76)
+        specifier: ^1.1.2
+        version: 1.1.2(@opentelemetry/api@1.9.1)(fastify@5.8.5)(zod@3.25.76)
       '@reaatech/mcp-server-core':
         specifier: ^1.0.1
         version: 1.0.1
@@ -258,11 +258,11 @@ importers:
         version: 3.25.76
     devDependencies:
       '@reaatech/mcp-contract-cli':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.2.1
+        version: 0.2.1
       '@reaatech/mcp-contract-validators':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       vitest:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.19.21)(jsdom@25.0.1)(lightningcss@1.32.0)
@@ -310,7 +310,7 @@ importers:
         version: 0.1.0
       bullmq:
         specifier: ^5.0.0
-        version: 5.78.0(redis@6.0.0(@opentelemetry/api@1.9.1))
+        version: 5.78.0(redis@6.0.1(@opentelemetry/api@1.9.1))
       fluent-ffmpeg:
         specifier: ^2.1.0
         version: 2.1.3
@@ -2747,12 +2747,12 @@ packages:
     resolution: {integrity: sha512-Y1be8451XDvMxQKVcYPPaHtvL/ZGzJOume0G1qBwdDg0yapGQnlj8YRFAnwRupKgT+j98lxnQh/wem4BSyI6Ng==}
     engines: {node: '>=18'}
 
-  '@reaatech/mcp-contract-cli@0.1.1':
-    resolution: {integrity: sha512-jIpEUxCQ73QsATfqdRkpp4YnD/6XLXIuNzxuFsWKDPDw3xa4DieNnFn0Kw5a0FU6qPOEaWo0ZGxhVMc5Bg5pXg==}
+  '@reaatech/mcp-contract-cli@0.2.1':
+    resolution: {integrity: sha512-piF096EeuDMX789rgKUE7Yxaiy9W8tK8Or969Jywazmtbrid4zF1tLJGfAQXAQth4sm9P+zc+IvviVnMkSyJoQ==}
     hasBin: true
 
-  '@reaatech/mcp-contract-client@0.1.1':
-    resolution: {integrity: sha512-2tvg4pARVThk6qJqynpP3U+XHEkm4pjsGDSZZRmzEMNtmyljdf4YkcFv63oafmq0Gjihv6AeNGPTVHNxWJwSmw==}
+  '@reaatech/mcp-contract-client@0.2.0':
+    resolution: {integrity: sha512-gD3jOHSjoxQ29njN8gc+lESXn1bhz8zrH4ttEvHi1NREc2fr9TukDRqVAmwYMElLh/+GZSXfOLtVBtJsxGEjSg==}
 
   '@reaatech/mcp-contract-core@0.1.1':
     resolution: {integrity: sha512-zdBws1eXjQIm95cugyggZZwfOrVi24Qr4Ohh23zgJzxfiDYEL4MbP/5WTLGKQtE8YTWcDQmTB8KXQVHr49qBcQ==}
@@ -2763,8 +2763,8 @@ packages:
   '@reaatech/mcp-contract-reporters@0.1.1':
     resolution: {integrity: sha512-WTKHGFSCSQsC16/JcPYaj5hzkY9z1sgbf8s1dJLBrqnvV2wlPGIJ0AHxfOFRKe1JmyKwwY5PJ9s3U1Hxk0ZdWA==}
 
-  '@reaatech/mcp-contract-validators@0.1.1':
-    resolution: {integrity: sha512-AZSyBFgRvQdcVgSaTIAvNgKOUmvIfY0r5/D1zSgRYtbtpOpF0kZILyRHZfgqhmbvnn71h9fqgvdzay0WuLM7uw==}
+  '@reaatech/mcp-contract-validators@0.1.2':
+    resolution: {integrity: sha512-2SyxZEKRCT4F9l593vNOv/hIA2zp10h1Vn0Khv0MkfjspaW/kmISciwMMlFR1FCaX4GZ0DFv3PjUiJUIiWygMA==}
 
   '@reaatech/mcp-gateway-allowlist@1.1.0':
     resolution: {integrity: sha512-5gub9mTU9n5N3f9uYs+bvtKgBQnpfrMmfYSUkaIueSiFYHppzzphxR1Z4D2ahYyVj8bUTg7nhx/HpjBqUTs3WA==}
@@ -2809,8 +2809,8 @@ packages:
   '@reaatech/mcp-gateway-observability@1.0.0':
     resolution: {integrity: sha512-hEC0tyP6dU0ovoHy2nUh6IQO8vlJ2RsiCYmuz2QxoKLd58pqNW9+lHDxBiOaMWoksiNrRai+wlioLWyqFABHSw==}
 
-  '@reaatech/mcp-gateway-rate-limit@1.1.0':
-    resolution: {integrity: sha512-94T6XJy8PKymQUm/0plmNlk/tAqs8Bd32E1u1zf6w4PbG+J5RhGcf4R9I0VoD9Zs/tHEuqxComMu8AgD0iEvyA==}
+  '@reaatech/mcp-gateway-rate-limit@1.1.2':
+    resolution: {integrity: sha512-HUPk7SMUslX4mmRevH1Q4klcAfHL26MqNMSi3DUx5PMBeqv6y7zeqHbcKdMBIwwOMInhJckpgYY2I0cG6TAj6A==}
     peerDependencies:
       fastify: ^5
     peerDependenciesMeta:
@@ -2892,6 +2892,12 @@ packages:
     peerDependencies:
       '@redis/client': ^6.0.0
 
+  '@redis/bloom@6.0.1':
+    resolution: {integrity: sha512-6ys5hhea+47n7o97ZFI4GvdzTQk/arIsXZgH159l6IVtJ4rZaB+KVdAfwvIxlmGA7z+NNlO8UxjTeQrenqjZcQ==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.0.1
+
   '@redis/client@5.12.1':
     resolution: {integrity: sha512-7aPGWeqA3uFm43o19umzdl16CEjK/JQGtSXVPevplTaOU3VJA/rseBC1QvYUz9lLDIMBimc4SW/zrW4S89BaCA==}
     engines: {node: '>= 18.19.0'}
@@ -2916,6 +2922,18 @@ packages:
       '@opentelemetry/api':
         optional: true
 
+  '@redis/client@6.0.1':
+    resolution: {integrity: sha512-SwYl64hKHE/NeO2VSSG1y/4zIm0cNepyOZtQrOpLiNRHmH2FdWBOecNzsLiXCQdFCF9MCyoPXwAbaG2iMO0A7Q==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@node-rs/xxhash': ^1.1.0
+      '@opentelemetry/api': '>=1 <2'
+    peerDependenciesMeta:
+      '@node-rs/xxhash':
+        optional: true
+      '@opentelemetry/api':
+        optional: true
+
   '@redis/json@5.12.1':
     resolution: {integrity: sha512-eOze75esLve4vfqDel7aMX08CNaiLLQS2fV8mpRN9NxPe1rVR4vQyYiW/OgtGUysF6QOr9ANhfxABKNOJfXdKg==}
     engines: {node: '>= 18.19.0'}
@@ -2927,6 +2945,12 @@ packages:
     engines: {node: '>= 20.0.0'}
     peerDependencies:
       '@redis/client': ^6.0.0
+
+  '@redis/json@6.0.1':
+    resolution: {integrity: sha512-KD1OztCYh7O9TkKMU9qZcFIKoudIGqmgXsOhQVq5A3REGrnl+wg0kporQFQCO+fcxe/nhvDgmBtXrm3diPGczA==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.0.1
 
   '@redis/search@5.12.1':
     resolution: {integrity: sha512-ItlxbxC9cKI6IU1TLWoczwJCRb6TdmkEpWv05UrPawqaAnWGRu3rcIqsc5vN483T2fSociuyV1UkWIL5I4//2w==}
@@ -2940,6 +2964,12 @@ packages:
     peerDependencies:
       '@redis/client': ^6.0.0
 
+  '@redis/search@6.0.1':
+    resolution: {integrity: sha512-G09OujS3eOtQnP7kZC5eZTiazwgeimlo6Pf3vHnE1jO7rfqrtmMI0R1/ZXfzoW8p9vB4QiH538aEsWaHKd8l5w==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.0.1
+
   '@redis/time-series@5.12.1':
     resolution: {integrity: sha512-c6JL6E3EcZJuNqKFz+KM+l9l5mpcQiKvTwgA3blt5glWJ8hjDk0yeHN3beE/MpqYIQ8UEX44ItQzgkE/gCBELQ==}
     engines: {node: '>= 18.19.0'}
@@ -2951,6 +2981,12 @@ packages:
     engines: {node: '>= 20.0.0'}
     peerDependencies:
       '@redis/client': ^6.0.0
+
+  '@redis/time-series@6.0.1':
+    resolution: {integrity: sha512-8aLGSDtCpnPTLD7lEiHHmuDCFppctLdT8geFIDf/7LWV9y8Vre6RB+aBZrgkeo3X1oPmTt1IbVAQVxsuJvkODw==}
+    engines: {node: '>= 20.0.0'}
+    peerDependencies:
+      '@redis/client': ^6.0.1
 
   '@rollup/rollup-android-arm-eabi@4.61.1':
     resolution: {integrity: sha512-JnBB8MdXj45cajvTuO5FmPlvFVJRQgvrz1uSEl3NwqFnReAPGwb8EanbGi4z2nRaqLzjJSv5/JmycoTKlRZxHA==}
@@ -3790,9 +3826,9 @@ packages:
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
-  commander@14.0.3:
-    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
-    engines: {node: '>=20'}
+  commander@15.0.0:
+    resolution: {integrity: sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==}
+    engines: {node: '>=22.12.0'}
 
   content-disposition@1.1.0:
     resolution: {integrity: sha512-5jRCH9Z/+DRP7rkvY83B+yGIGX96OYdJmzngqnw2SBSxqCFPd0w2km3s5iawpGX8krnwSGmF0FW5Nhr0Hfai3g==}
@@ -5010,6 +5046,10 @@ packages:
 
   redis@6.0.0:
     resolution: {integrity: sha512-n9Thfc39OXleEoPT2k5gwKsqY+HfCww3YS71ofcr9KKbkn89bpjU9dToIlD+JRdM3/GYQkwMtVgTxLyed+LptQ==}
+    engines: {node: '>= 20.0.0'}
+
+  redis@6.0.1:
+    resolution: {integrity: sha512-54FoTBdFw10Y602pShvk8CGJlSH55nY+CNAZaVk8YdxY3rENihdYm2lXrujrtupYTHyrVSZUxOdeStNQbNvnQg==}
     engines: {node: '>= 20.0.0'}
 
   regex-recursion@6.0.2:
@@ -8350,16 +8390,16 @@ snapshots:
 
   '@reaatech/idempotency-middleware@1.0.0': {}
 
-  '@reaatech/mcp-contract-cli@0.1.1':
+  '@reaatech/mcp-contract-cli@0.2.1':
     dependencies:
-      '@reaatech/mcp-contract-client': 0.1.1
+      '@reaatech/mcp-contract-client': 0.2.0
       '@reaatech/mcp-contract-core': 0.1.1
       '@reaatech/mcp-contract-observability': 0.1.1
       '@reaatech/mcp-contract-reporters': 0.1.1
-      '@reaatech/mcp-contract-validators': 0.1.1
-      commander: 14.0.3
+      '@reaatech/mcp-contract-validators': 0.1.2
+      commander: 15.0.0
 
-  '@reaatech/mcp-contract-client@0.1.1':
+  '@reaatech/mcp-contract-client@0.2.0':
     dependencies:
       '@reaatech/mcp-contract-core': 0.1.1
       '@reaatech/mcp-contract-observability': 0.1.1
@@ -8377,9 +8417,9 @@ snapshots:
     dependencies:
       '@reaatech/mcp-contract-core': 0.1.1
 
-  '@reaatech/mcp-contract-validators@0.1.1':
+  '@reaatech/mcp-contract-validators@0.1.2':
     dependencies:
-      '@reaatech/mcp-contract-client': 0.1.1
+      '@reaatech/mcp-contract-client': 0.2.0
       '@reaatech/mcp-contract-core': 0.1.1
       '@reaatech/mcp-contract-observability': 0.1.1
       ajv: 8.20.0
@@ -8454,10 +8494,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@reaatech/mcp-gateway-rate-limit@1.1.0(@opentelemetry/api@1.9.1)(fastify@5.8.5)(zod@3.25.76)':
+  '@reaatech/mcp-gateway-rate-limit@1.1.2(@opentelemetry/api@1.9.1)(fastify@5.8.5)(zod@3.25.76)':
     dependencies:
       '@reaatech/mcp-gateway-core': 1.1.0(zod@3.25.76)
-      redis: 6.0.0(@opentelemetry/api@1.9.1)
+      redis: 6.0.1(@opentelemetry/api@1.9.1)
     optionalDependencies:
       fastify: 5.8.5
     transitivePeerDependencies:
@@ -8561,6 +8601,10 @@ snapshots:
     dependencies:
       '@redis/client': 6.0.0(@opentelemetry/api@1.9.1)
 
+  '@redis/bloom@6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.0.1(@opentelemetry/api@1.9.1)
+
   '@redis/client@5.12.1(@opentelemetry/api@1.9.1)':
     dependencies:
       cluster-key-slot: 1.1.2
@@ -8568,6 +8612,12 @@ snapshots:
       '@opentelemetry/api': 1.9.1
 
   '@redis/client@6.0.0(@opentelemetry/api@1.9.1)':
+    dependencies:
+      cluster-key-slot: 1.1.2
+    optionalDependencies:
+      '@opentelemetry/api': 1.9.1
+
+  '@redis/client@6.0.1(@opentelemetry/api@1.9.1)':
     dependencies:
       cluster-key-slot: 1.1.2
     optionalDependencies:
@@ -8581,6 +8631,10 @@ snapshots:
     dependencies:
       '@redis/client': 6.0.0(@opentelemetry/api@1.9.1)
 
+  '@redis/json@6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.0.1(@opentelemetry/api@1.9.1)
+
   '@redis/search@5.12.1(@redis/client@5.12.1(@opentelemetry/api@1.9.1))':
     dependencies:
       '@redis/client': 5.12.1(@opentelemetry/api@1.9.1)
@@ -8589,6 +8643,10 @@ snapshots:
     dependencies:
       '@redis/client': 6.0.0(@opentelemetry/api@1.9.1)
 
+  '@redis/search@6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.0.1(@opentelemetry/api@1.9.1)
+
   '@redis/time-series@5.12.1(@redis/client@5.12.1(@opentelemetry/api@1.9.1))':
     dependencies:
       '@redis/client': 5.12.1(@opentelemetry/api@1.9.1)
@@ -8596,6 +8654,10 @@ snapshots:
   '@redis/time-series@6.0.0(@redis/client@6.0.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@redis/client': 6.0.0(@opentelemetry/api@1.9.1)
+
+  '@redis/time-series@6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))':
+    dependencies:
+      '@redis/client': 6.0.1(@opentelemetry/api@1.9.1)
 
   '@rollup/rollup-android-arm-eabi@4.61.1':
     optional: true
@@ -9336,7 +9398,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  bullmq@5.78.0(redis@6.0.0(@opentelemetry/api@1.9.1)):
+  bullmq@5.78.0(redis@6.0.1(@opentelemetry/api@1.9.1)):
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.10.1
@@ -9345,7 +9407,7 @@ snapshots:
       semver: 7.8.0
       tslib: 2.8.1
     optionalDependencies:
-      redis: 6.0.0(@opentelemetry/api@1.9.1)
+      redis: 6.0.1(@opentelemetry/api@1.9.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -9427,7 +9489,7 @@ snapshots:
 
   comma-separated-tokens@2.0.3: {}
 
-  commander@14.0.3: {}
+  commander@15.0.0: {}
 
   content-disposition@1.1.0: {}
 
@@ -10781,6 +10843,17 @@ snapshots:
       '@redis/json': 6.0.0(@redis/client@6.0.0(@opentelemetry/api@1.9.1))
       '@redis/search': 6.0.0(@redis/client@6.0.0(@opentelemetry/api@1.9.1))
       '@redis/time-series': 6.0.0(@redis/client@6.0.0(@opentelemetry/api@1.9.1))
+    transitivePeerDependencies:
+      - '@node-rs/xxhash'
+      - '@opentelemetry/api'
+
+  redis@6.0.1(@opentelemetry/api@1.9.1):
+    dependencies:
+      '@redis/bloom': 6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))
+      '@redis/client': 6.0.1(@opentelemetry/api@1.9.1)
+      '@redis/json': 6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))
+      '@redis/search': 6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))
+      '@redis/time-series': 6.0.1(@redis/client@6.0.1(@opentelemetry/api@1.9.1))
     transitivePeerDependencies:
       - '@node-rs/xxhash'
       - '@opentelemetry/api'

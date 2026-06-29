@@ -142,13 +142,6 @@ jobs:
       # Now a BLOCKING gate: the deps are real (service containers above), so a
       # failure here means the MCP contract is actually broken, not flaky setup.
       - name: MCP contract conformance
-        # Advisory until @reaatech/mcp-contract-kit can authenticate: the /mcp
-        # transport is Bearer-gated (per-tenant org key resolved from the DB) and
-        # the kit (v0.1.1) has no flag to send a token, so it connects anonymously
-        # and gets HTTP 401 before any suite runs. This step still smoke-tests the
-        # real path — build, boot, migrate, /mcp/health — and uploads the report;
-        # drop continue-on-error once the kit gains an auth/header option.
-        continue-on-error: true
         run: |
           # Spawn the MCP server in the background.
           node apps/mcp/dist/index.js &
@@ -170,12 +163,30 @@ jobs:
             exit 1
           fi
 
+          # The /mcp transport is Bearer-gated (per-tenant org key resolved from
+          # the DB), so mint a throwaway org + full-scope API key against the same
+          # database + API_KEY_ENC_KEY the server uses, and authenticate the kit
+          # with it. Without a token the suites get HTTP 401 and 0 tests run.
+          MCP_BEARER="$(pnpm --filter @medialocker/worker exec tsx scripts/seed-conformance-key.ts)"
+          if [ -z "$MCP_BEARER" ]; then
+            echo "Failed to mint a conformance API key"
+            kill "$MCP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
           # Run the contract/conformance suite via @reaatech/mcp-contract-cli
           # (which uses @reaatech/mcp-contract-validators) against the running
           # server, emitting a JSON report artifact.
+          # Scope to the suites that apply to a tools MCP server (matching the
+          # `contract` script in apps/mcp/package.json). The registry/routing
+          # suites target agent-registry / agent-routing servers and don't apply
+          # here; performance is load-shaped and run separately if needed.
           STATUS=0
           pnpm --filter @medialocker/mcp exec mcp-contract-kit test \
             "http://localhost:3003/mcp" \
+            --bearer "$MCP_BEARER" \
+            --suite protocol \
+            --suite security \
             --format json \
             --output mcp-contract-report.json \
             --fail-on critical || STATUS=$?
