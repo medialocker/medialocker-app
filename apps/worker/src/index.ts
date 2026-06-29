@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     }
   }
 
-  probeWorker = new Worker('media:probe', processProbeJob, {
+  probeWorker = new Worker('media-probe', processProbeJob, {
     connection,
     concurrency: 4,
     removeOnComplete: { age: 3600 },
@@ -72,7 +72,7 @@ async function main(): Promise<void> {
     },
   } as MLWorkerOptions);
 
-  thumbnailWorker = new Worker('media:thumbnail', processThumbnailJob, {
+  thumbnailWorker = new Worker('media-thumbnail', processThumbnailJob, {
     connection,
     concurrency: 2,
     removeOnComplete: { age: 3600 },
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     },
   } as MLWorkerOptions);
 
-  posterWorker = new Worker('media:poster', processPosterJob, {
+  posterWorker = new Worker('media-poster', processPosterJob, {
     connection,
     concurrency: 2,
     removeOnComplete: { age: 3600 },
@@ -96,7 +96,7 @@ async function main(): Promise<void> {
     },
   } as MLWorkerOptions);
 
-  spriteWorker = new Worker('media:sprite', processSpriteJob, {
+  spriteWorker = new Worker('media-sprite', processSpriteJob, {
     connection,
     concurrency: 1,
     removeOnComplete: { age: 3600 },
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
     },
   } as MLWorkerOptions);
 
-  variantWorker = new Worker('media:variant', processVariantJob, {
+  variantWorker = new Worker('media-variant', processVariantJob, {
     connection,
     concurrency: 2,
     removeOnComplete: { age: 3600 },
@@ -121,8 +121,8 @@ async function main(): Promise<void> {
   } as MLWorkerOptions);
 
   usageRollupWorker = new Worker(
-    'usage:rollup',
-    withJobIdempotency('usage:rollup', processUsageRollupJob),
+    'usage-rollup',
+    withJobIdempotency('usage-rollup', processUsageRollupJob),
     {
       connection,
       concurrency: 1,
@@ -137,8 +137,8 @@ async function main(): Promise<void> {
   );
 
   billingReconcileWorker = new Worker(
-    'billing:reconcile',
-    withJobIdempotency('billing:reconcile', processBillingReconcileJob),
+    'billing-reconcile',
+    withJobIdempotency('billing-reconcile', processBillingReconcileJob),
     {
       connection,
       concurrency: 1,
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
     } as MLWorkerOptions,
   );
 
-  secretRotateWorker = new Worker('secret:rotate', processSecretRotationJob, {
+  secretRotateWorker = new Worker('secret-rotate', processSecretRotationJob, {
     connection,
     concurrency: 1,
     removeOnComplete: { age: 3600 },
@@ -165,7 +165,7 @@ async function main(): Promise<void> {
   } as MLWorkerOptions);
 
   usageEventsConsumerWorker = new Worker(
-    'usage:events:consume',
+    'usage-events-consume',
     processUsageEventsConsumerJob,
     {
       connection,
@@ -181,8 +181,8 @@ async function main(): Promise<void> {
   );
 
   storageReconcileWorker = new Worker(
-    'storage:reconcile',
-    withJobIdempotency('storage:reconcile', processStorageReconcileJob),
+    'storage-reconcile',
+    withJobIdempotency('storage-reconcile', processStorageReconcileJob),
     {
       connection,
       concurrency: 1,
@@ -198,70 +198,70 @@ async function main(): Promise<void> {
 
   storageReconcileWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'storage:reconcile', error: err.message },
+      { jobId: job?.id, queue: 'storage-reconcile', error: err.message },
       'Job failed',
     );
   });
 
   secretRotateWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'secret:rotate', error: err.message },
+      { jobId: job?.id, queue: 'secret-rotate', error: err.message },
       'Job failed',
     );
   });
 
   probeWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'media:probe', error: err.message },
+      { jobId: job?.id, queue: 'media-probe', error: err.message },
       'Job failed',
     );
   });
 
   thumbnailWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'media:thumbnail', error: err.message },
+      { jobId: job?.id, queue: 'media-thumbnail', error: err.message },
       'Job failed',
     );
   });
 
   variantWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'media:variant', error: err.message },
+      { jobId: job?.id, queue: 'media-variant', error: err.message },
       'Job failed',
     );
   });
 
   posterWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'media:poster', error: err.message },
+      { jobId: job?.id, queue: 'media-poster', error: err.message },
       'Job failed',
     );
   });
 
   spriteWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'media:sprite', error: err.message },
+      { jobId: job?.id, queue: 'media-sprite', error: err.message },
       'Job failed',
     );
   });
 
   usageRollupWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'usage:rollup', error: err.message },
+      { jobId: job?.id, queue: 'usage-rollup', error: err.message },
       'Job failed',
     );
   });
 
   billingReconcileWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'billing:reconcile', error: err.message },
+      { jobId: job?.id, queue: 'billing-reconcile', error: err.message },
       'Job failed',
     );
   });
 
   usageEventsConsumerWorker.on('failed', (job, err) => {
     logger.error(
-      { jobId: job?.id, queue: 'usage:events:consume', error: err.message },
+      { jobId: job?.id, queue: 'usage-events-consume', error: err.message },
       'Job failed',
     );
   });

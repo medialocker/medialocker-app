@@ -19,7 +19,7 @@ const mediaJobOptions = {
 export function getVariantQueue(): Queue {
   const redisUrl = getConfig().REDIS_URL;
   if (!variantQueue || cachedUrl !== redisUrl) {
-    variantQueue = new Queue("media:variant", {
+    variantQueue = new Queue("media-variant", {
       connection: { url: redisUrl },
       // Retry transient failures + retain exhausted jobs as an inspectable DLQ,
       // matching the worker's media-queue policy. (M3)
@@ -39,7 +39,7 @@ export function getVariantQueue(): Queue {
 export function getProbeQueue(): Queue {
   const redisUrl = getConfig().REDIS_URL;
   if (!probeQueue || cachedUrl !== redisUrl) {
-    probeQueue = new Queue("media:probe", {
+    probeQueue = new Queue("media-probe", {
       connection: { url: redisUrl },
       defaultJobOptions: mediaJobOptions,
     });

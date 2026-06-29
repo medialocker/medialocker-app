@@ -10,7 +10,7 @@ let cachedUrl: string | null = null;
 
 export function getVariantQueue(redisUrl: string): Queue {
   if (!variantQueue || cachedUrl !== redisUrl) {
-    variantQueue = new Queue("media:variant", {
+    variantQueue = new Queue("media-variant", {
       connection: { url: redisUrl },
       defaultJobOptions: {
         attempts: 5,

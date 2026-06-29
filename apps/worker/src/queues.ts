@@ -22,16 +22,16 @@ const scheduledJobOptions: JobsOptions = {
   removeOnFail: { age: 7 * 86400 },
 };
 
-export const probeQueue = new Queue('media:probe', { connection, defaultJobOptions: mediaJobOptions });
-export const thumbnailQueue = new Queue('media:thumbnail', { connection, defaultJobOptions: mediaJobOptions });
-export const posterQueue = new Queue('media:poster', { connection, defaultJobOptions: mediaJobOptions });
-export const spriteQueue = new Queue('media:sprite', { connection, defaultJobOptions: mediaJobOptions });
-export const variantQueue = new Queue('media:variant', { connection, defaultJobOptions: mediaJobOptions });
-export const usageRollupQueue = new Queue('usage:rollup', { connection, defaultJobOptions: scheduledJobOptions });
-export const usageEventsConsumerQueue = new Queue('usage:events:consume', { connection, defaultJobOptions: scheduledJobOptions });
-export const billingReconcileQueue = new Queue('billing:reconcile', { connection, defaultJobOptions: scheduledJobOptions });
-export const secretRotateQueue = new Queue('secret:rotate', { connection, defaultJobOptions: scheduledJobOptions });
-export const storageReconcileQueue = new Queue('storage:reconcile', { connection, defaultJobOptions: scheduledJobOptions });
+export const probeQueue = new Queue('media-probe', { connection, defaultJobOptions: mediaJobOptions });
+export const thumbnailQueue = new Queue('media-thumbnail', { connection, defaultJobOptions: mediaJobOptions });
+export const posterQueue = new Queue('media-poster', { connection, defaultJobOptions: mediaJobOptions });
+export const spriteQueue = new Queue('media-sprite', { connection, defaultJobOptions: mediaJobOptions });
+export const variantQueue = new Queue('media-variant', { connection, defaultJobOptions: mediaJobOptions });
+export const usageRollupQueue = new Queue('usage-rollup', { connection, defaultJobOptions: scheduledJobOptions });
+export const usageEventsConsumerQueue = new Queue('usage-events-consume', { connection, defaultJobOptions: scheduledJobOptions });
+export const billingReconcileQueue = new Queue('billing-reconcile', { connection, defaultJobOptions: scheduledJobOptions });
+export const secretRotateQueue = new Queue('secret-rotate', { connection, defaultJobOptions: scheduledJobOptions });
+export const storageReconcileQueue = new Queue('storage-reconcile', { connection, defaultJobOptions: scheduledJobOptions });
 
 export async function closeQueues(): Promise<void> {
   await Promise.all([
