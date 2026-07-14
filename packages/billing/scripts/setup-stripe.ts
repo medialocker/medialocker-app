@@ -4,11 +4,13 @@ import { getStripe } from '../src/stripe.js';
 import { syncPlanToStripe, getPlans } from '../src/plans.js';
 
 // base_price_cents = published monthly subscription price (source of truth for
-// the base Stripe price). per_gb_price_cents = the separate per-GB overage rate.
+// the base Stripe price). per_gb_price_cents = the separate per-GB overage rate,
+// in WHOLE cents (the column is INTEGER). These are ~6x/5x/3x the ~0.6c/GB
+// Hetzner marginal storage cost for Starter/Pro/Studio.
 const DEFAULT_PLANS = [
-  { tier_key: 'starter', name: 'Starter', included_gb: 100, base_price_cents: 900, per_gb_price_cents: 2.4 },
-  { tier_key: 'pro', name: 'Pro', included_gb: 1000, base_price_cents: 2900, per_gb_price_cents: 2.2 },
-  { tier_key: 'studio', name: 'Studio', included_gb: 5000, base_price_cents: 9900, per_gb_price_cents: 2.0 },
+  { tier_key: 'starter', name: 'Starter', included_gb: 100, base_price_cents: 900, per_gb_price_cents: 4 },
+  { tier_key: 'pro', name: 'Pro', included_gb: 1000, base_price_cents: 2900, per_gb_price_cents: 3 },
+  { tier_key: 'studio', name: 'Studio', included_gb: 5000, base_price_cents: 9900, per_gb_price_cents: 2 },
 ];
 
 async function main() {

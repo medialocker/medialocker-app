@@ -10,7 +10,7 @@ const PLANS = [
     name: "Starter",
     included_gb: 100,
     base_price_cents: 900,
-    per_gb_price_cents: 2,
+    per_gb_price_cents: 4,
     stripe_price_id: null,
   },
   {
@@ -18,7 +18,7 @@ const PLANS = [
     name: "Pro",
     included_gb: 1000,
     base_price_cents: 2900,
-    per_gb_price_cents: 2,
+    per_gb_price_cents: 3,
     stripe_price_id: null,
   },
   {
