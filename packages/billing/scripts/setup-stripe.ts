@@ -8,9 +8,9 @@ import { syncPlanToStripe, getPlans } from '../src/plans.js';
 // in WHOLE cents (the column is INTEGER). These are ~6x/5x/3x the ~0.6c/GB
 // Hetzner marginal storage cost for Starter/Pro/Studio.
 const DEFAULT_PLANS = [
-  { tier_key: 'starter', name: 'Starter', included_gb: 100, base_price_cents: 900, per_gb_price_cents: 4 },
-  { tier_key: 'pro', name: 'Pro', included_gb: 1000, base_price_cents: 2900, per_gb_price_cents: 3 },
-  { tier_key: 'studio', name: 'Studio', included_gb: 5000, base_price_cents: 9900, per_gb_price_cents: 2 },
+  { tier_key: 'starter', name: 'Starter', included_gb: 100, base_price_cents: 999, per_gb_price_cents: 4 },
+  { tier_key: 'pro', name: 'Pro', included_gb: 1000, base_price_cents: 2999, per_gb_price_cents: 3 },
+  { tier_key: 'studio', name: 'Studio', included_gb: 5000, base_price_cents: 9999, per_gb_price_cents: 2 },
 ];
 
 async function main() {
