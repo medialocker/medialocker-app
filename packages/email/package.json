@@ -1,5 +1,5 @@
 {
-  "name": "@medialocker/billing",
+  "name": "@medialocker/email",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,26 +15,20 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "echo 'lint ok'",
+    "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "clean": "rm -rf dist",
-    "setup:stripe": "tsx scripts/setup-stripe.ts"
+    "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.600.0",
-    "@medialocker/auth": "workspace:*",
     "@medialocker/config": "workspace:*",
-    "@medialocker/core": "workspace:*",
-    "@medialocker/email": "workspace:*",
     "@medialocker/observability": "workspace:*",
-    "postgres": "^3.4.5",
-    "stripe": "^17.5.0",
-    "zod": "^3.23.8"
+    "mustache": "^4.2.0",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
+    "@types/mustache": "^4.2.5",
     "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   }

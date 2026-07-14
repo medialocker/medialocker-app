@@ -51,6 +51,16 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PORTAL_CONFIG_ID: z.string().optional(),
 
+  // Transactional email (Resend). Held only by the backend (api/worker). When
+  // RESEND_API_KEY is unset, @medialocker/email is a logged no-op — the same
+  // graceful-degradation shape as STRIPE_SECRET_KEY above, so dev/CI/test boot
+  // and run without sending anything. EMAIL_FROM must use a domain verified in
+  // Resend (or the resend.dev sandbox address) or sends are rejected.
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().default("MediaLocker <no-reply@medialocker.io>"),
+  CONTACT_INBOX: z.string().default("support@medialocker.io"),
+  EMAIL_LOGO_URL: z.string().default("https://medialocker.io/email-logo.png"),
+
   INTERNAL_API_SECRET: z.string().default("changeme-internal-secret"),
   API_KEY_ENC_KEY: z.string().default("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
 

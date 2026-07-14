@@ -5,9 +5,22 @@ vi.mock('@aws-sdk/client-s3', () => ({
     send: vi.fn().mockResolvedValue({}),
   })),
   CreateBucketCommand: vi.fn(),
+  PutPublicAccessBlockCommand: vi.fn(),
 }));
 
+// Stub the notify module: these tests assert the webhook *invokes* the right
+// lifecycle email; the best-effort safety of notify itself is covered in
+// notify.test.ts.
+vi.mock('../src/notify.js', () => ({
+  notifyWelcome: vi.fn().mockResolvedValue(undefined),
+  notifyReceipt: vi.fn().mockResolvedValue(undefined),
+  notifyPaymentFailed: vi.fn().mockResolvedValue(undefined),
+  notifyCanceled: vi.fn().mockResolvedValue(undefined),
+}));
+import * as notify from '../src/notify.js';
+
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_test_secret');
   vi.stubEnv('STRIPE_SECRET_KEY', 'sk_test_fake');
 });
@@ -156,5 +169,73 @@ describe('handleWebhook', () => {
     expect(result.received).toBe(true);
     const texts = sql.queries.map((q: { text: string }) => q.text);
     expect(texts.some((t: string) => t.includes('INSERT INTO subscriptions'))).toBe(false);
+  });
+
+  it('sends a welcome email after provisioning a checkout', async () => {
+    const { handleWebhook } = await import('../src/webhook.js');
+    const sql = makeRecordingSql();
+    sql.onQuery('FROM plans WHERE tier_key', [{ id: 'plan-pro', included_gb: 1000 }]);
+    sql.onQuery('INTO organizations', [{ id: 'org-new' }]);
+    sql.onQuery('INTO webhook_events', [{ event_id: 'evt_checkout_1' }]);
+
+    const mockStripe = {
+      webhooks: { constructEvent: () => checkoutEvent() },
+      subscriptions: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue({ status: 'active', current_period_end: 1893456000 }),
+      },
+    } as any;
+
+    await handleWebhook('{}', 'sig_ok', { client: sql, stripe: mockStripe });
+
+    expect(notify.notifyWelcome).toHaveBeenCalledWith(
+      sql,
+      expect.objectContaining({
+        orgId: 'org-new',
+        to: 'jane@example.com',
+        tier: 'pro',
+        includedGb: 1000,
+      }),
+    );
+  });
+
+  it('sends a dunning email on invoice.payment_failed', async () => {
+    const { handleWebhook } = await import('../src/webhook.js');
+    const sql = makeRecordingSql();
+    sql.onQuery('INTO webhook_events', [{ event_id: 'evt_if_1' }]);
+    sql.onQuery('SELECT org_id FROM subscriptions', [{ org_id: 'org-1' }]);
+
+    const event = {
+      id: 'evt_if_1',
+      type: 'invoice.payment_failed',
+      data: {
+        object: {
+          id: 'in_1',
+          subscription: 'sub_1',
+          customer_email: 'jane@example.com',
+          amount_due: 1900,
+          hosted_invoice_url: 'https://pay.stripe.test/in_1',
+        },
+      },
+    };
+    const mockStripe = { webhooks: { constructEvent: () => event } } as any;
+
+    const result = await handleWebhook('{}', 'sig_ok', { client: sql, stripe: mockStripe });
+
+    expect(result.received).toBe(true);
+    // subscription marked past_due (existing behavior preserved)
+    const texts = sql.queries.map((q: { text: string }) => q.text);
+    expect(texts.some((t: string) => t.includes('UPDATE subscriptions'))).toBe(true);
+    // and the owner is emailed
+    expect(notify.notifyPaymentFailed).toHaveBeenCalledWith(
+      sql,
+      expect.objectContaining({
+        orgId: 'org-1',
+        to: 'jane@example.com',
+        amountDueCents: 1900,
+        updateUrl: 'https://pay.stripe.test/in_1',
+      }),
+    );
   });
 });
