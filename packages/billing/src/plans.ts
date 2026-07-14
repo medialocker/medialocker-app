@@ -6,6 +6,11 @@ export interface PlanRow {
   tier_key: string;
   name: string;
   included_gb: number;
+  // Canonical monthly subscription price in cents (the published tier price,
+  // e.g. 900 = $9.00). This is the source of truth for the base Stripe price —
+  // NOT included_gb * per_gb_price_cents, which is the overage rate, a different
+  // number. See migration 011.
+  base_price_cents: number;
   per_gb_price_cents: number;
   stripe_product_id: string | null;
   stripe_price_id: string | null;
@@ -14,7 +19,7 @@ export interface PlanRow {
 
 export async function getPlans(client: Sql): Promise<PlanRow[]> {
   return client<PlanRow[]>`
-    SELECT id, tier_key, name, included_gb, per_gb_price_cents,
+    SELECT id, tier_key, name, included_gb, base_price_cents, per_gb_price_cents,
            stripe_product_id, stripe_price_id, stripe_addon_price_id
       FROM plans
      ORDER BY included_gb ASC
@@ -26,7 +31,7 @@ export async function getPlanById(
   planId: string,
 ): Promise<PlanRow | null> {
   const rows = await client<PlanRow[]>`
-    SELECT id, tier_key, name, included_gb, per_gb_price_cents,
+    SELECT id, tier_key, name, included_gb, base_price_cents, per_gb_price_cents,
            stripe_product_id, stripe_price_id, stripe_addon_price_id
       FROM plans
      WHERE id = ${planId}
@@ -39,7 +44,7 @@ export async function getPlanByTierKey(
   tierKey: string,
 ): Promise<PlanRow | null> {
   const rows = await client<PlanRow[]>`
-    SELECT id, tier_key, name, included_gb, per_gb_price_cents,
+    SELECT id, tier_key, name, included_gb, base_price_cents, per_gb_price_cents,
            stripe_product_id, stripe_price_id, stripe_addon_price_id
       FROM plans
      WHERE tier_key = ${tierKey}
@@ -93,7 +98,10 @@ export async function syncPlanToStripe(
     limit: 5,
   });
 
-  const basePriceCents = Math.round(plan.included_gb * plan.per_gb_price_cents);
+  // The base recurring price is the canonical monthly plan price from the DB
+  // (migration 011), NOT included_gb * per_gb_price_cents (that product is the
+  // overage rate applied to included storage — a different, lower number).
+  const basePriceCents = plan.base_price_cents;
   const existingBasePrice = existingPrices.data.find(
     (p) =>
       p.recurring?.interval === 'month' &&

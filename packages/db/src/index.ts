@@ -154,13 +154,14 @@ export async function createPlan(data: {
   tier_key: string;
   name: string;
   included_gb: number;
+  base_price_cents: number;
   per_gb_price_cents: number;
   stripe_price_id?: string | null;
 }) {
   const rows = await getSql()<
     Record<string, unknown>[]
-  >`INSERT INTO plans (tier_key, name, included_gb, per_gb_price_cents, stripe_price_id)
-    VALUES (${data.tier_key}, ${data.name}, ${data.included_gb}, ${data.per_gb_price_cents}, ${data.stripe_price_id ?? null})
+  >`INSERT INTO plans (tier_key, name, included_gb, base_price_cents, per_gb_price_cents, stripe_price_id)
+    VALUES (${data.tier_key}, ${data.name}, ${data.included_gb}, ${data.base_price_cents}, ${data.per_gb_price_cents}, ${data.stripe_price_id ?? null})
     RETURNING *`;
   return rows[0]!;
 }
