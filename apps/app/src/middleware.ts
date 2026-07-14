@@ -37,10 +37,10 @@ function buildCsp(nonce: string): string {
     return [
       `default-src 'self'`,
       `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
-      `style-src 'self' 'unsafe-inline'`,
+      `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
       `img-src 'self' data: blob: ${local}`,
       `media-src 'self' blob: ${local}`,
-      `font-src 'self' data:`,
+      `font-src 'self' data: https://fonts.gstatic.com`,
       `worker-src 'self' blob:`,
       `connect-src 'self' ${local} ${supabaseUrl} ${supabaseWss}`,
       `frame-src 'self' ${local}`,
@@ -53,11 +53,16 @@ function buildCsp(nonce: string): string {
 
   return [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`,
-    `style-src 'self' 'unsafe-inline'`,
+    // NOTE: a per-request nonce + 'strict-dynamic' only works when every route is
+    // dynamically rendered so Next can stamp the nonce onto its <script> tags.
+    // The dashboard has statically-prerendered routes (e.g. /login), whose baked
+    // HTML can't carry a fresh per-request nonce, so 'strict-dynamic' blocked ALL
+    // chunks. Use 'self' 'unsafe-inline' so both static and dynamic routes load.
+    `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
     `img-src 'self' data: blob: ${s3Host}`,
     `media-src 'self' blob: ${s3Host}`,
-    `font-src 'self' data:`,
+    `font-src 'self' data: https://fonts.gstatic.com`,
     `worker-src 'self' blob:`,
     `connect-src 'self' ${apiUrl} ${supabaseUrl} ${supabaseWss} ${s3Host}`,
     `frame-src 'self' ${s3Host}`,
