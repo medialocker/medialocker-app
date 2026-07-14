@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@aws-sdk/client-s3', () => ({
   S3Client: vi.fn().mockImplementation(() => ({
@@ -6,15 +6,6 @@ vi.mock('@aws-sdk/client-s3', () => ({
   })),
   CreateBucketCommand: vi.fn(),
 }));
-
-// Warm the heavy module graph (Stripe SDK, AWS SDK, OTEL, @medialocker/*) ONCE,
-// outside any timed test. The first cold `await import('../src/webhook.js')` can
-// exceed the 5s test timeout on CI's cold start, which intermittently failed the
-// "returns error on invalid signature" case. Paying it here (30s hook) keeps the
-// per-test dynamic imports cached and instant.
-beforeAll(async () => {
-  await import('../src/webhook.js');
-}, 30000);
 
 beforeEach(() => {
   vi.stubEnv('STRIPE_WEBHOOK_SECRET', 'whsec_test_secret');
