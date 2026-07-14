@@ -19,6 +19,7 @@ import { searchRoutes } from "./routes/search.js";
 import { usageRoutes } from "./routes/usage.js";
 import { presignRoutes } from "./routes/presign.js";
 import { webhookRoutes } from "./routes/webhook.js";
+import { contactRoutes } from "./routes/contact.js";
 import { openapiRoutes } from "./openapi.js";
 
 const logger = createLogger("api");
@@ -89,6 +90,7 @@ server.addHook("onRequest", async (request, reply) => {
     "/api/openapi.json",
     "/api/health",
     "/api/plans",
+    "/api/contact",
   ];
   const path = request.url.split("?")[0]!;
   if (openPaths.includes(path)) return;
@@ -106,6 +108,7 @@ await server.register(cors, {
   origin: [
     `https://app.${cfg.PUBLIC_BASE_DOMAIN}`,
     `https://${cfg.PUBLIC_BASE_DOMAIN}`,
+    `https://www.${cfg.PUBLIC_BASE_DOMAIN}`,
     `https://mcp.${cfg.PUBLIC_BASE_DOMAIN}`,
   ],
   credentials: true,
@@ -204,6 +207,7 @@ await server.register(searchRoutes, { prefix: "/api" });
 await server.register(usageRoutes, { prefix: "/api" });
 await server.register(presignRoutes, { prefix: "/api" });
 await server.register(webhookRoutes, { prefix: "/api" });
+await server.register(contactRoutes, { prefix: "/api" });
 await server.register(openapiRoutes, { prefix: "/api" });
 
 const port = parseInt(process.env["PORT"] ?? "3002", 10);

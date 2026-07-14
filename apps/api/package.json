@@ -22,6 +22,7 @@
     "@medialocker/config": "workspace:*",
     "@medialocker/core": "workspace:*",
     "@medialocker/db": "workspace:*",
+    "@medialocker/email": "workspace:*",
     "@medialocker/media": "workspace:*",
     "@medialocker/observability": "workspace:*",
     "@reaatech/idempotency-middleware": "^1.0.0",

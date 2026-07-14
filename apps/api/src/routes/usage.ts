@@ -2,7 +2,13 @@ import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { validate } from "../middleware/validation.js";
 import { requireScope } from "../middleware/auth.js";
-import { STRIPE_API_VERSION, addCapacity, changePlan } from "@medialocker/billing";
+import {
+  STRIPE_API_VERSION,
+  addCapacity,
+  changePlan,
+  notifyCapacityAdded,
+  notifyPlanChanged,
+} from "@medialocker/billing";
 import { acquireOrgLock } from "@medialocker/core";
 
 const addCapacitySchema = z.object({
@@ -238,6 +244,14 @@ export async function usageRoutes(app: FastifyInstance): Promise<void> {
           INSERT INTO audit_log (org_id, actor, action, target, ip)
           VALUES (${auth.orgId}, ${auth.userId ?? auth.apiKeyId ?? "system"}, 'capacity.add', ${`${gb}GB`}, ${request.ip})
         `;
+        // Best-effort manual "capacity added" email (auto:false). Sent from this
+        // origination point, not confirmAddOn, so each add emails exactly once.
+        await notifyCapacityAdded(sql, {
+          orgId: auth.orgId,
+          addedGb: gb,
+          costCents: res.cost ?? 0,
+          auto: false,
+        });
         return reply.status(200).send({
           addedGb: gb,
           newAllocatedGb: Number(BigInt(after[0]!.allocated_bytes)) / 1e9,
@@ -323,6 +337,12 @@ export async function usageRoutes(app: FastifyInstance): Promise<void> {
           INSERT INTO audit_log (org_id, actor, action, target, ip)
           VALUES (${auth.orgId}, ${auth.userId ?? auth.apiKeyId ?? "system"}, 'plan.change', ${tierKey}, ${request.ip})
         `;
+        // Best-effort plan-changed email.
+        await notifyPlanChanged(sql, {
+          orgId: auth.orgId,
+          fromTier: res.previousPlanName ?? "your previous plan",
+          toTier: res.planName ?? tierKey,
+        });
         return {
           tierKey,
           planName: res.planName,

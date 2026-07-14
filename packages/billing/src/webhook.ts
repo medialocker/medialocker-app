@@ -8,6 +8,12 @@ import { encrypt } from '@medialocker/auth';
 import { buildBucketName } from '@medialocker/core';
 import { syncSubscriptionStatus } from './subscriptions.js';
 import { confirmAddOn } from './capacity-addons.js';
+import {
+  notifyWelcome,
+  notifyReceipt,
+  notifyPaymentFailed,
+  notifyCanceled,
+} from './notify.js';
 import { createLogger } from '@medialocker/observability';
 
 const log = createLogger('billing:webhook');
@@ -107,6 +113,11 @@ async function dispatchEvent(
         await handleSubscriptionItemsChanged(sub, ctx);
       }
 
+      // Best-effort: tell the owner their plan was canceled (never throws).
+      if (event.type === 'customer.subscription.deleted') {
+        await notifyCanceled(ctx.client, sub.id);
+      }
+
       break;
     }
 
@@ -191,6 +202,9 @@ async function handleCheckoutCompleted(
     log.warn({ err, stripeSubId }, 'Could not retrieve subscription; using defaults');
   }
 
+  // Captured from inside the txn so we can send the welcome email AFTER commit.
+  let provisionedOrgId: string | undefined;
+
   await ctx.client.begin(async (tx) => {
     // 1. App-side user row (id = Supabase auth user id).
     await tx`
@@ -225,6 +239,8 @@ async function handleCheckoutCompleted(
         ON CONFLICT (org_id, user_id) DO NOTHING
       `;
     }
+
+    provisionedOrgId = orgId;
 
     // 3. Link the subscription (one per org, §20 #5).
     // C09: before overwriting an existing subscription with a new checkout,
@@ -349,6 +365,17 @@ async function handleCheckoutCompleted(
 
     log.info({ orgId, userId, tier, planId: plan.id }, 'Checkout provisioned org + subscription + capacity + default bucket/key');
   });
+
+  // Best-effort welcome email, AFTER the provisioning txn commits so we never
+  // email on a rolled-back provision. Never throws (notify swallows errors).
+  if (provisionedOrgId) {
+    await notifyWelcome(ctx.client, {
+      orgId: provisionedOrgId,
+      to: email,
+      tier,
+      includedGb: plan.included_gb,
+    });
+  }
 }
 
 async function handleSubscriptionItemsChanged(
@@ -388,6 +415,16 @@ async function handleInvoicePaid(
        WHERE org_id = ${orgId}
     `;
     log.info({ orgId, stripeSubId }, 'Reset spend counter for new billing cycle');
+
+    // Renewal receipt (best-effort). Only on renewals — the first charge
+    // (billing_reason 'subscription_create') is covered by the welcome email, so
+    // signups don't get two emails seconds apart.
+    await notifyReceipt(ctx.client, {
+      orgId,
+      to: invoice.customer_email,
+      amountCents: invoice.amount_paid,
+      invoiceUrl: invoice.hosted_invoice_url,
+    });
   }
 }
 
@@ -426,5 +463,13 @@ async function handleInvoiceFailed(
       },
       'Invoice payment failed — subscription marked past_due, auto-capacity disabled',
     );
+
+    // Dunning email (best-effort): ask the owner to update their payment method.
+    await notifyPaymentFailed(ctx.client, {
+      orgId: orgRow.org_id,
+      to: invoice.customer_email,
+      amountDueCents: invoice.amount_due,
+      updateUrl: invoice.hosted_invoice_url,
+    });
   }
 }

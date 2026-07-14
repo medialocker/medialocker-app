@@ -1,6 +1,7 @@
 import type { Sql } from 'postgres';
 import { getStripe } from './stripe.js';
 import { gbToBytes, calculateAddOnCost, calculateProratedCost, acquireOrgLock } from '@medialocker/core';
+import { notifyCapacityAdded } from './notify.js';
 
 export interface AddOnResult {
   success: boolean;
@@ -258,6 +259,16 @@ export async function autoAddCapacity(
   // enforces the max-spend cap — all under its own per-org advisory lock (§24).
   const res = await addCapacity(client, orgId, cap.increment_gb, true);
   if (!res.success) return { added: false, reason: res.reason };
+
+  // Best-effort "we added storage" email for the automatic top-up. Sent here (not
+  // in confirmAddOn, which also fires for manual adds) so each add emails once.
+  await notifyCapacityAdded(client, {
+    orgId,
+    addedGb: cap.increment_gb,
+    costCents: res.cost ?? 0,
+    auto: true,
+  });
+
   return { added: true, addedGb: cap.increment_gb, cost: res.cost };
 }
 

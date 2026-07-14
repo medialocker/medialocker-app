@@ -10,6 +10,8 @@ import { gbToBytes, acquireOrgLock } from '@medialocker/core';
 export interface ChangePlanResult {
   success: boolean;
   planName?: string;
+  /** Name of the plan the org was on before this change (for the email). */
+  previousPlanName?: string;
   newAllocatedBytes?: bigint;
   code?: 'DowngradeBlocked' | 'NotFound' | 'NoSubscription' | 'NotConfigured' | 'StripeError';
   reason?: string;
@@ -62,9 +64,15 @@ export async function changePlan(
     }
 
     const subRows = await tx<
-      { stripe_subscription_id: string | null; current_price_id: string | null }[]
+      {
+        stripe_subscription_id: string | null;
+        current_price_id: string | null;
+        current_plan_name: string;
+      }[]
     >`
-      SELECT s.stripe_subscription_id, p.stripe_price_id AS current_price_id
+      SELECT s.stripe_subscription_id,
+             p.stripe_price_id AS current_price_id,
+             p.name AS current_plan_name
         FROM subscriptions s
         JOIN plans p ON p.id = s.plan_id
        WHERE s.org_id = ${orgId}
@@ -141,6 +149,7 @@ export async function changePlan(
     return {
       success: true,
       planName: plan.name,
+      previousPlanName: sub.current_plan_name,
       newAllocatedBytes: targetAllocated,
     };
   });
