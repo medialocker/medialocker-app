@@ -205,15 +205,15 @@ async function main(): Promise<void> {
 
   // 1) Plans (global pricing) — ensure present.
   const PLANS = [
-    { tier_key: "starter", name: "Starter", included_gb: 100, per_gb_price_cents: 2 },
-    { tier_key: "pro", name: "Pro", included_gb: 1000, per_gb_price_cents: 2 },
-    { tier_key: "studio", name: "Studio", included_gb: 5000, per_gb_price_cents: 2 },
+    { tier_key: "starter", name: "Starter", included_gb: 100, base_price_cents: 900, per_gb_price_cents: 2 },
+    { tier_key: "pro", name: "Pro", included_gb: 1000, base_price_cents: 2900, per_gb_price_cents: 2 },
+    { tier_key: "studio", name: "Studio", included_gb: 5000, base_price_cents: 9900, per_gb_price_cents: 2 },
   ];
   for (const p of PLANS) {
     await sql`
-      INSERT INTO plans (tier_key, name, included_gb, per_gb_price_cents)
-      VALUES (${p.tier_key}, ${p.name}, ${p.included_gb}, ${p.per_gb_price_cents})
-      ON CONFLICT (tier_key) DO UPDATE SET name = EXCLUDED.name, included_gb = EXCLUDED.included_gb`;
+      INSERT INTO plans (tier_key, name, included_gb, base_price_cents, per_gb_price_cents)
+      VALUES (${p.tier_key}, ${p.name}, ${p.included_gb}, ${p.base_price_cents}, ${p.per_gb_price_cents})
+      ON CONFLICT (tier_key) DO UPDATE SET name = EXCLUDED.name, included_gb = EXCLUDED.included_gb, base_price_cents = EXCLUDED.base_price_cents`;
   }
   const [starter] = await sql<{ id: string }[]>`SELECT id FROM plans WHERE tier_key = 'pro' LIMIT 1`;
   const planId = starter!.id;

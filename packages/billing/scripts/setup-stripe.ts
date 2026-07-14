@@ -3,10 +3,12 @@ import { loadConfig, getConfig, resetConfig } from '@medialocker/config';
 import { getStripe } from '../src/stripe.js';
 import { syncPlanToStripe, getPlans } from '../src/plans.js';
 
+// base_price_cents = published monthly subscription price (source of truth for
+// the base Stripe price). per_gb_price_cents = the separate per-GB overage rate.
 const DEFAULT_PLANS = [
-  { tier_key: 'starter', name: 'Starter', included_gb: 100, per_gb_price_cents: 2.4 },
-  { tier_key: 'pro', name: 'Pro', included_gb: 1000, per_gb_price_cents: 2.2 },
-  { tier_key: 'studio', name: 'Studio', included_gb: 5000, per_gb_price_cents: 2.0 },
+  { tier_key: 'starter', name: 'Starter', included_gb: 100, base_price_cents: 900, per_gb_price_cents: 2.4 },
+  { tier_key: 'pro', name: 'Pro', included_gb: 1000, base_price_cents: 2900, per_gb_price_cents: 2.2 },
+  { tier_key: 'studio', name: 'Studio', included_gb: 5000, base_price_cents: 9900, per_gb_price_cents: 2.0 },
 ];
 
 async function main() {
@@ -41,13 +43,14 @@ async function main() {
           tier_key: string;
           name: string;
           included_gb: number;
+          base_price_cents: number;
           per_gb_price_cents: number;
           stripe_product_id: string | null;
           stripe_price_id: string | null;
           stripe_addon_price_id: string | null;
         }>
       >`
-        SELECT id, tier_key, name, included_gb, per_gb_price_cents,
+        SELECT id, tier_key, name, included_gb, base_price_cents, per_gb_price_cents,
                stripe_product_id, stripe_price_id, stripe_addon_price_id
           FROM plans
          WHERE tier_key = ${planDefaults.tier_key}
@@ -57,9 +60,10 @@ async function main() {
 
       if (existingPlans.length === 0) {
         const inserted = await sql<[{ id: string }]>`
-          INSERT INTO plans (tier_key, name, included_gb, per_gb_price_cents)
+          INSERT INTO plans (tier_key, name, included_gb, base_price_cents, per_gb_price_cents)
           VALUES (${planDefaults.tier_key}, ${planDefaults.name},
-                  ${planDefaults.included_gb}, ${planDefaults.per_gb_price_cents})
+                  ${planDefaults.included_gb}, ${planDefaults.base_price_cents},
+                  ${planDefaults.per_gb_price_cents})
           RETURNING id
         `;
         planId = inserted[0]!.id;
@@ -70,6 +74,7 @@ async function main() {
           UPDATE plans
              SET name = ${planDefaults.name},
                  included_gb = ${planDefaults.included_gb},
+                 base_price_cents = ${planDefaults.base_price_cents},
                  per_gb_price_cents = ${planDefaults.per_gb_price_cents}
            WHERE id = ${planId}
         `;
@@ -81,6 +86,7 @@ async function main() {
         tier_key: planDefaults.tier_key,
         name: planDefaults.name,
         included_gb: planDefaults.included_gb,
+        base_price_cents: planDefaults.base_price_cents,
         per_gb_price_cents: planDefaults.per_gb_price_cents,
         stripe_product_id: existingPlans[0]?.stripe_product_id ?? null,
         stripe_price_id: existingPlans[0]?.stripe_price_id ?? null,

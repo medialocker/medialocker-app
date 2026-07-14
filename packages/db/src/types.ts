@@ -40,6 +40,7 @@ export interface Plan {
   tier_key: string;
   name: string;
   included_gb: number;
+  base_price_cents: number;
   per_gb_price_cents: number;
   stripe_product_id: string | null;
   stripe_price_id: string | null;

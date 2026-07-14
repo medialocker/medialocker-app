@@ -168,10 +168,11 @@ server.get("/api/plans", async (request) => {
     tier_key: string;
     name: string;
     included_gb: string;
+    base_price_cents: number;
     per_gb_price_cents: number;
     stripe_price_id: string | null;
   }[]>`
-    SELECT tier_key, name, included_gb, per_gb_price_cents, stripe_price_id
+    SELECT tier_key, name, included_gb, base_price_cents, per_gb_price_cents, stripe_price_id
     FROM plans ORDER BY included_gb ASC
   `;
   return {
@@ -179,7 +180,14 @@ server.get("/api/plans", async (request) => {
       tierKey: p.tier_key,
       name: p.name,
       includedGb: Number(p.included_gb),
+      // Canonical monthly subscription price (source of truth for the marketing
+      // site — it no longer hardcodes NEXT_PUBLIC_PRICE_*). See migration 011.
+      basePriceCents: p.base_price_cents,
       perGbPriceCents: p.per_gb_price_cents,
+      // The recurring Stripe price id, or null until `pnpm stripe:setup` runs.
+      // Price ids are not secret (they appear in client Stripe.js); the site's
+      // checkout resolves the tier's price from here instead of env vars.
+      stripePriceId: p.stripe_price_id,
       hasStripePrice: Boolean(p.stripe_price_id),
     })),
   };
