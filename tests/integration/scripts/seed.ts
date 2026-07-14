@@ -121,6 +121,7 @@ export async function seedPlanAndSubscription(
   orgId: string,
   opts: {
     includedGb?: number;
+    basePriceCents?: number;
     perGbPriceCents?: number;
     daysRemaining?: number;
   } = {},
@@ -128,11 +129,12 @@ export async function seedPlanAndSubscription(
   const tierKey = `itest-tier-${randomUUID().slice(0, 8)}`;
   const planRows = await sql<{ id: string }[]>`
     INSERT INTO plans (
-      tier_key, name, included_gb, per_gb_price_cents,
+      tier_key, name, included_gb, base_price_cents, per_gb_price_cents,
       stripe_product_id, stripe_price_id, stripe_addon_price_id
     ) VALUES (
       ${tierKey}, 'Integration Plan',
       ${opts.includedGb ?? 100},
+      ${opts.basePriceCents ?? 900},
       ${opts.perGbPriceCents ?? 2},
       'prod_itest', 'price_itest_base', 'price_itest_addon'
     )
