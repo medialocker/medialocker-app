@@ -47,6 +47,10 @@ function createMockSql(
       events.push("add-checksum-col");
       return Promise.resolve([]);
     }
+    if (text.startsWith("ALTER TABLE migrations ENABLE ROW LEVEL SECURITY")) {
+      events.push("enable-rls");
+      return Promise.resolve([]);
+    }
     if (text.startsWith("SELECT pg_try_advisory_lock")) {
       events.push("lock");
       return Promise.resolve([{ locked: true }]);
@@ -134,6 +138,7 @@ describe("runMigrations", () => {
     expect(events).toEqual([
       "create-table",
       "add-checksum-col",
+      "enable-rls",
       "lock",
       "check:001_a.sql",
       "begin-start",
