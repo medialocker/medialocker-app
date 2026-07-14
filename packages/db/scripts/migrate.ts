@@ -50,6 +50,13 @@ export async function runMigrations(
   // installs whose `migrations` table predates this column are upgraded in place.
   await sql`ALTER TABLE migrations ADD COLUMN IF NOT EXISTS checksum TEXT`;
 
+  // Enable RLS on this internal tracker. Supabase exposes every `public` table
+  // via PostgREST on the anon key, so a table without RLS is world-readable/
+  // writable (the `rls_disabled_in_public` advisory). With no policies, RLS
+  // denies anon/authenticated while the owner (this migration runner) is
+  // unaffected. Idempotent — a no-op once enabled.
+  await sql`ALTER TABLE migrations ENABLE ROW LEVEL SECURITY`;
+
   const lockId = 0x3a99_7b1d;
 
   const lockResult = await sql<
